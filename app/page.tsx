@@ -16,14 +16,10 @@ export default function Home() {
   const [loadingBlueprint, setLoadingBlueprint] = useState(false);
   const [selectedChoice, setSelectedChoice] = useState<"A" | "B" | null>(null);
 
-  // -------------------------------
-  // Fetch Next Question / Final Step
-  // -------------------------------
   const fetchNextQuestion = async (choiceOverride?: "A" | "B") => {
     let updatedHistory = history;
     const finalChoice = choiceOverride ?? selectedChoice ?? undefined;
 
-    // Save last choice
     if (finalChoice && question) {
       const chosenOption = question.options.find(
         (opt) => opt.key === finalChoice
@@ -45,9 +41,6 @@ export default function Home() {
 
     const nextStep = step + (finalChoice ? 1 : 0);
 
-    // -------------------------------
-    // Final Step → Generate Blueprint
-    // -------------------------------
     if (nextStep > MAX_STEPS) {
       setLoadingBlueprint(true);
 
@@ -62,7 +55,6 @@ export default function Home() {
 
       const data = await res.json();
 
-      // Store blueprint in localStorage
       if (typeof window !== "undefined") {
         localStorage.setItem(
           "nicheroot_blueprint",
@@ -70,14 +62,10 @@ export default function Home() {
         );
       }
 
-      // Redirect to blueprint page
       window.location.href = "/blueprint";
       return;
     }
 
-    // -------------------------------
-    // Fetch next question
-    // -------------------------------
     const res = await fetch("/api/next-question", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -97,9 +85,6 @@ export default function Home() {
     }
   };
 
-  // -------------------------------
-  // Start Flow
-  // -------------------------------
   const startFlow = () => {
     setHistory([]);
     setSelectedChoice(null);
@@ -107,114 +92,220 @@ export default function Home() {
     fetchNextQuestion();
   };
 
-  const progressPercent = question ? (question.step / MAX_STEPS) * 100 : 0;
+  const progressPercent = question
+    ? (question.step / MAX_STEPS) * 100
+    : 0;
 
-  // -------------------------------
-  // RENDER
-  // -------------------------------
   return (
-    <main className="min-h-screen bg-[#F4F6FB] text-gray-900">
-      <div className="max-w-5xl mx-auto px-6 py-12 md:py-16">
-        {/* Top badge (same family as blueprint) */}
-        <div className="flex justify-between items-center mb-6">
-          <span className="inline-flex items-center gap-2 rounded-full bg-white/80 border border-gray-200 px-3 py-1 text-xs font-medium text-gray-600 shadow-sm">
-            <span className="h-1.5 w-1.5 rounded-full bg-blue-500" />
-            NicheRoot · Smart business matching
-          </span>
-        </div>
+    <main className="min-h-screen bg-[#F7F8FA] text-gray-900">
+      <div className="max-w-5xl mx-auto px-6 py-10">
+        {/* ===========================
+            STICKY GLASS HEADER
+        ============================ */}
+        <header className="fixed top-0 left-0 w-full backdrop-blur-md bg-white/70 border-b border-gray-200 z-50">
+          <div className="max-w-5xl mx-auto px-6 py-3 flex items-center justify-between">
+            <div className="font-semibold text-gray-900">NicheRoot</div>
 
-        {/* LOADING BLUEPRINT */}
-        {loadingBlueprint && (
-          <div className="text-center mt-24">
-            <h2 className="text-3xl md:text-4xl font-semibold mb-4">
-              Generating your business blueprint...
-            </h2>
-            <p className="text-gray-500">
-              Please wait a moment while we build your personalized plan.
-            </p>
-          </div>
-        )}
+            <nav className="flex items-center gap-6 text-sm text-gray-600">
+              <a href="#how-it-works" className="hover:text-gray-900">
+                How it works
+              </a>
+              <a href="#features" className="hover:text-gray-900">
+                Features
+              </a>
+              <a href="#who-its-for" className="hover:text-gray-900">
+                Who it's for
+              </a>
+            </nav>
 
-        {/* INTRO SCREEN */}
-        {!question && !loadingBlueprint && (
-          <div className="relative mt-6">
-            {/* Glow behind card */}
-            <div className="pointer-events-none absolute inset-0 translate-y-4 scale-105 blur-3xl bg-gradient-to-r from-blue-500/18 via-indigo-500/18 to-purple-500/18" />
-            <motion.div
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-              className="relative bg-white border border-gray-200 shadow-sm rounded-3xl p-8 md:p-10 space-y-6"
+            <button
+              onClick={startFlow}
+              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition"
             >
-              <header className="space-y-3">
-                <h1 className="text-3xl md:text-4xl font-semibold leading-tight">
-                  Let’s find a business that fits you.
-                </h1>
-                <p className="text-gray-600 text-sm md:text-base max-w-3xl">
-                  Describe your background, skills, goals, budget, and what you
-                  want from your next chapter. NicheRoot will use this to guide
-                  you through a short series of trade-off questions and then
-                  generate a tailored business blueprint.
-                </p>
-              </header>
+              Start questions
+            </button>
+          </div>
+        </header>
 
-              <div className="grid md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-6 items-start">
-                {/* Textarea */}
-                <div className="space-y-3">
-                  <label className="text-xs font-semibold tracking-wide uppercase text-gray-500">
-                    Your situation
-                  </label>
-                  <textarea
-                    className="w-full h-40 md:h-48 p-4 border border-gray-300 rounded-2xl shadow-sm 
-                               focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white text-sm"
-                    value={userInput}
-                    onChange={(e) => setUserInput(e.target.value)}
-                    placeholder="For example: 
+        {/* Push content below header */}
+        <div className="pt-24" />
+
+        {/* =====================================================
+              HOMEPAGE (shown before questions)
+        ====================================================== */}
+        {!question && !loadingBlueprint && (
+          <>
+            {/* ===========================
+                HERO SECTION
+            ============================ */}
+            <section className="mt-12 md:mt-20">
+              <div className="max-w-3xl">
+                <h1 className="text-4xl md:text-5xl font-bold leading-tight text-gray-900">
+                  Let’s find a business that{" "}
+                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600">
+                    actually fits you.
+                  </span>
+                </h1>
+
+                <p className="text-gray-600 text-lg mt-4 leading-relaxed">
+                  Describe your reality — your time, money, strengths, and what
+                  you want from your next chapter. NicheRoot will turn that into
+                  a short decision flow and generate a personalized business
+                  blueprint you can actually execute.
+                </p>
+              </div>
+            </section>
+
+            {/* ===========================
+                VALUE PROPOSITION CARDS
+            ============================ */}
+            <section className="mt-16 grid md:grid-cols-3 gap-6" id="features">
+              <div className="rounded-2xl bg-white border border-gray-200 p-6 shadow-sm">
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  Built for real constraints
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  Your time, money, lifestyle, and risk tolerance are treated as
+                  first-class inputs — not afterthoughts.
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-white border border-gray-200 p-6 shadow-sm">
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  A decision engine — not random ideas
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  No endless lists. Just smart A/B trade-off questions that
+                  narrow down the right direction.
+                </p>
+              </div>
+
+              <div className="rounded-2xl bg-white border border-gray-200 p-6 shadow-sm">
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  Actionable blueprint
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  You’ll get a niche, monetization options, tools, and a
+                  step-by-step roadmap — not generic advice.
+                </p>
+              </div>
+            </section>
+
+            {/* ===========================
+                HOW IT WORKS (1 → 2 → 3)
+            ============================ */}
+            <section id="how-it-works" className="mt-20">
+              <h2 className="text-2xl md:text-3xl font-semibold mb-6">
+                How NicheRoot works
+              </h2>
+
+              <div className="grid md:grid-cols-3 gap-6">
+                <div className="rounded-2xl bg-white border border-gray-200 p-6 shadow-sm">
+                  <p className="font-semibold text-gray-900">1. Describe</p>
+                  <p className="text-gray-600 text-sm mt-2">
+                    Tell us your constraints: time, money, preferences,
+                    strengths, and what you want.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-white border border-gray-200 p-6 shadow-sm">
+                  <p className="font-semibold text-gray-900">2. Decide</p>
+                  <p className="text-gray-600 text-sm mt-2">
+                    Answer 6 focused A/B questions built to reveal your best
+                    business direction.
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-white border border-gray-200 p-6 shadow-sm">
+                  <p className="font-semibold text-gray-900">3. Blueprint</p>
+                  <p className="text-gray-600 text-sm mt-2">
+                    Get a personalized plan: niche, monetization methods,
+                    roadmap, tools, and next steps.
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            {/* ===========================
+                INPUT AREA
+            ============================ */}
+            <section className="mt-20 max-w-3xl">
+              <h2 className="text-xl font-semibold mb-2">Your situation</h2>
+
+              <textarea
+                className="w-full h-48 p-4 border border-gray-300 rounded-xl shadow-sm 
+                           focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white"
+                value={userInput}
+                onChange={(e) => setUserInput(e.target.value)}
+                placeholder="For example: 
 • Your current work or studies
 • How much time you realistically have per week
 • How much money you can invest
-• What you do NOT want (stress, employees, etc.)
-• What an ideal business would feel like for you"
-                  />
-                  <p className="text-[11px] text-gray-500">
-                    Don’t worry about writing it “perfectly”. Honest, messy
-                    text is better than something that sounds impressive.
-                  </p>
-                </div>
+• What you do NOT want (stress, employees)
+• What an ideal business would feel like"
+              />
 
-                {/* Side helper card */}
-                <div className="space-y-3 bg-gray-50 border border-gray-200 rounded-2xl p-4 md:p-5">
-                  <p className="text-xs font-semibold tracking-wide uppercase text-gray-500">
-                    What you’ll get
-                  </p>
-                  <ul className="space-y-2 text-sm text-gray-700">
-                    <li>• A suggested business direction that fits your reality</li>
-                    <li>• Clear monetization ideas and first steps</li>
-                    <li>• A simple roadmap you can actually follow</li>
-                    <li>• No generic “100 business ideas” spam</li>
-                  </ul>
-                  <div className="mt-3 rounded-xl border border-blue-100 bg-blue-50/70 px-3 py-2 text-[11px] text-blue-900">
-                    <span className="font-semibold mr-1">Tip:</span>
-                    Mention both your constraints (time, money, energy) and your
-                    strengths. The better the input, the sharper the blueprint.
-                  </div>
-                </div>
+              <p className="text-gray-500 text-xs mt-2">
+                Don’t worry about writing it perfectly. Honest text is better
+                than impressive-sounding text.
+              </p>
+            </section>
+
+            {/* ===========================
+                WHO IT'S FOR
+            ============================ */}
+            <section id="who-its-for" className="mt-20 grid md:grid-cols-3 gap-6">
+              <div className="rounded-2xl bg-white border border-gray-200 p-6 shadow-sm">
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  People who want clarity
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  If you feel overwhelmed by too many ideas, this filters
+                  everything to one path.
+                </p>
               </div>
 
-              <div className="flex justify-end">
-                <button
-                  onClick={startFlow}
-                  className="px-6 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl font-medium
-                             hover:shadow-md hover:shadow-blue-500/30 transition text-sm"
-                >
-                  Start questions
-                </button>
+              <div className="rounded-2xl bg-white border border-gray-200 p-6 shadow-sm">
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  People who don’t want to waste time
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  No courses, no fluff — just high-signal decisions in minutes.
+                </p>
               </div>
-            </motion.div>
-          </div>
+
+              <div className="rounded-2xl bg-white border border-gray-200 p-6 shadow-sm">
+                <h3 className="font-semibold text-gray-900 mb-2">
+                  People who want a realistic plan
+                </h3>
+                <p className="text-gray-600 text-sm">
+                  You get a blueprint based on your real constraints, not hustle
+                  culture fantasies.
+                </p>
+              </div>
+            </section>
+
+            {/* ===========================
+                FINAL CTA
+            ============================ */}
+            <section className="mt-20 text-center">
+              <h2 className="text-2xl md:text-3xl font-semibold mb-4">
+                Ready to find a business that fits your life?
+              </h2>
+
+              <button
+                onClick={startFlow}
+                className="px-7 py-3 bg-gradient-to-r from-blue-600 to-indigo-600 text-white 
+                           rounded-xl font-medium text-sm hover:shadow-md hover:shadow-blue-500/30 transition"
+              >
+                Start the 6 questions
+              </button>
+            </section>
+          </>
         )}
-
-        {/* QUESTION SCREEN */}
+        {/* =====================================================
+            QUESTION FLOW SCREEN (A/B QUESTIONS)
+        ====================================================== */}
         {question && !loadingBlueprint && (
           <AnimatePresence mode="wait">
             <motion.div
@@ -227,29 +318,24 @@ export default function Home() {
             >
               {/* Progress + Title */}
               <div className="space-y-4">
-                <div>
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
-                    Step {question.step} of {MAX_STEPS}
-                  </p>
-                  <h2 className="text-2xl md:text-3xl font-semibold mt-1">
-                    {question.question}
-                  </h2>
-                  <p className="text-sm text-gray-500 mt-1">
-                    Choose the option that feels more aligned with how you
-                    actually want to work and live, not what sounds impressive.
-                  </p>
-                </div>
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                  Step {question.step} of {MAX_STEPS}
+                </p>
+
+                <h2 className="text-2xl md:text-3xl font-semibold mt-1">
+                  {question.question}
+                </h2>
 
                 {/* Progress bar */}
                 <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden">
                   <div
-                    className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 transition-all"
+                    className="h-full bg-blue-600 transition-all"
                     style={{ width: `${progressPercent}%` }}
                   />
                 </div>
               </div>
 
-              {/* Option cards */}
+              {/* Options */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {question.options.map((opt) => (
                   <OptionCard
@@ -265,13 +351,11 @@ export default function Home() {
               <div className="flex justify-end">
                 <button
                   disabled={!selectedChoice}
-                  onClick={() =>
-                    selectedChoice && fetchNextQuestion(selectedChoice)
-                  }
-                  className={`px-6 py-3 rounded-xl font-medium text-sm transition
+                  onClick={() => selectedChoice && fetchNextQuestion(selectedChoice)}
+                  className={`px-6 py-3 rounded-xl font-medium transition
                     ${
                       selectedChoice
-                        ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white hover:shadow-md hover:shadow-blue-500/30"
+                        ? "bg-blue-600 text-white hover:bg-blue-700"
                         : "bg-gray-200 text-gray-500 cursor-not-allowed"
                     }
                   `}
@@ -282,6 +366,29 @@ export default function Home() {
             </motion.div>
           </AnimatePresence>
         )}
+
+        {/* =====================================================
+            LOADING BLUEPRINT
+        ====================================================== */}
+        {loadingBlueprint && (
+          <div className="text-center mt-24">
+            <h2 className="text-3xl md:text-4xl font-semibold mb-4">
+              Generating your business blueprint...
+            </h2>
+            <p className="text-gray-500">
+              Please wait a moment while we build your personalized plan.
+            </p>
+          </div>
+        )}
+
+        {/* =====================================================
+            FOOTER
+        ====================================================== */}
+        <footer className="mt-24 py-10 text-center text-sm text-gray-500">
+          <p>NicheRoot — Smart business matching</p>
+          <p className="mt-1">© {new Date().getFullYear()} NicheRoot. All rights reserved.</p>
+        </footer>
+
       </div>
     </main>
   );
