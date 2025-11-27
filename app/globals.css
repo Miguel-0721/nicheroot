@@ -1,17 +1,29 @@
 @import "tailwindcss";
 
+/* ============================
+   CSS VARIABLES
+============================ */
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #181818;
+
+  /* Colors */
+  --brand-500: #4f46e5;
+  --brand-600: #4338ca;
+  --brand-100: #eef0ff;
+
+  /* Shadows */
+  --card-shadow: 0 6px 20px rgba(0,0,0,0.06);
+  --card-shadow-lg: 0 12px 32px rgba(0,0,0,0.08);
+
+  /* Layout */
+  --section-y: 7rem;
+  --container-width: 1280px;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
+/* ============================
+   DARK MODE
+============================ */
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
@@ -19,22 +31,285 @@
   }
 }
 
+/* ============================
+   GLOBAL RESET
+============================ */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
-/* NICHE ROOT — GLOBAL LAYOUT IMPROVEMENTS */
-.nicheroot-container {
-  max-width: 900px;
-  margin: 0 auto;
-  padding: 2rem 1.2rem;
+  font-family: system-ui, sans-serif;
+  line-height: 1.65;
 }
 
-.section-card {
-  background: rgba(22, 22, 22, 0.6);
-  border: 1px solid #333;
-  border-radius: 16px;
-  padding: 24px;
-  margin-bottom: 28px;
+img {
+  max-width: 100%;
+}
+
+/* ============================
+   LAYOUT
+============================ */
+.container {
+  max-width: var(--container-width);
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.section {
+  padding-top: var(--section-y);
+  padding-bottom: var(--section-y);
+}
+
+/* Background helpers */
+.bg-white-section {
+  background: #ffffff;
+}
+
+.bg-gray-section {
+  background: #f7f8fa;
+}
+
+/* ============================
+   TYPOGRAPHY
+============================ */
+.hero-title {
+  font-size: 3.4rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.hero-sub {
+  font-size: 1.2rem;
+  margin-top: 1.4rem;
+  color: #555;
+}
+
+.section-title {
+  font-size: 2.4rem;
+  font-weight: 700;
+  margin-bottom: 1.4rem;
+}
+
+.section-sub {
+  max-width: 650px;
+  font-size: 1.2rem;
+  color: #666;
+}
+
+/* ============================
+   BADGE
+============================ */
+.badge {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  background: var(--brand-100);
+  border-radius: 999px;
+  font-weight: 600;
+  color: var(--brand-500);
+  margin-bottom: 1.4rem;
+}
+
+/* ============================
+   BUTTONS
+============================ */
+.primary-btn {
+  background: linear-gradient(90deg, var(--brand-500), var(--brand-600));
+  color: white;
+  padding: 0.85rem 1.6rem;
+  font-size: 1rem;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.2s ease;
+}
+
+.primary-btn:hover {
+  filter: brightness(1.1);
+}
+
+/* ============================
+   HERO ILLUSTRATION
+============================ */
+.hero-illustration {
+  width: 560px;
+  height: auto;
+  border-radius: 20px;
+  box-shadow: var(--card-shadow);
+}
+
+/* ============================
+   CARDS
+============================ */
+.card {
+  background: white;
+  padding: 2.2rem;
+  border-radius: 18px;
+  box-shadow: var(--card-shadow);
+  transition: 0.25s ease;
+}
+
+.card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--card-shadow-lg);
+}
+
+.icon {
+  font-size: 1.9rem;
+  margin-bottom: 1rem;
+}
+
+.card-title {
+  font-weight: 700;
+  font-size: 1.15rem;
+  margin-bottom: 0.5rem;
+}
+
+/* ============================
+   BLUEPRINT CARD
+============================ */
+.blueprint-card {
+  background: #0d1321;
+  color: white;
+  border-radius: 22px;
+  padding: 2.6rem;
+  box-shadow: var(--card-shadow-lg);
+}
+
+/* ============================
+   TEXTAREA
+============================ */
+.text-area {
+  width: 100%;
+  height: 180px;
+  padding: 1.2rem;
+  border-radius: 14px;
+  border: 1px solid #d0d0d8;
+  background: white;
+  resize: vertical;
+  font-size: 1rem;
+}
+
+/* ============================
+   NAVBAR
+============================ */
+.premium-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  background: rgba(255,255,255,0.75);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid rgba(200,200,210,0.4);
+  z-index: 20;
+}
+
+.nav-container {
+  max-width: var(--container-width);
+  margin: 0 auto;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.nav-logo {
+  font-size: 1.3rem;
+  font-weight: 700;
+}
+
+.nav-links {
+  display: flex;
+  gap: 2rem;
+}
+
+.nav-link {
+  text-decoration: none;
+  color: #555;
+  font-size: 0.95rem;
+  font-weight: 500;
+  position: relative;
+}
+
+.nav-link:hover {
+  color: #222;
+}
+
+.nav-link::after {
+  content: "";
+  position: absolute;
+  height: 2px;
+  width: 0%;
+  left: 0;
+  bottom: -4px;
+  background: var(--brand-500);
+  transition: width 0.25s ease;
+}
+
+.nav-link:hover::after {
+  width: 100%;
+}
+
+.nav-btn {
+  background: linear-gradient(90deg, var(--brand-500), var(--brand-600));
+  color: white;
+  padding: 0.6rem 1.1rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  border: none;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.nav-btn:hover {
+  filter: brightness(1.1);
+}
+
+/* ===============================
+   GLOBAL SPACING UPGRADE
+   =============================== */
+
+/* Add spacing before section titles */
+.section-title {
+  margin-bottom: 3rem !important;  /* 48px */
+}
+
+/* Add spacing between title and cards */
+.grid-3 {
+  margin-top: 3rem !important; /* 48px */
+}
+
+/* Increase spacing between all major sections */
+section {
+  padding-top: 7rem !important;   /* 112px */
+  padding-bottom: 7rem !important;
+}
+
+/* Extra airy spacing on the "Who it's for" section */
+#who-its-for {
+  padding-top: 9rem !important;
+  padding-bottom: 9rem !important;
+}
+
+/* ===============================
+   FOOTER FIX
+   =============================== */
+footer.footer {
+  background: #f8f9fb !important;      /* light background, no black */
+  color: #555 !important;
+  padding: 2.5rem 0 !important;        /* vertical spacing */
+  margin-top: 5rem !important;         /* space above footer */
+  text-align: center !important;
+  border-top: 1px solid #e5e7eb;       /* subtle divider */
+}
+
+/* Remove weird black strip */
+body {
+  background-color: #ffffff !important;
 }
