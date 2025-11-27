@@ -4,6 +4,8 @@ import Image from "next/image";
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import OptionCard from "@/components/OptionCard";
+
+// ✅ FIXED IMPORT — Must match /types/question-types.ts
 import { QuestionType, HistoryItem } from "@/types/question-types";
 
 const MAX_STEPS = 6;
@@ -11,7 +13,9 @@ const MAX_STEPS = 6;
 export default function Home() {
   const [illustrationLoaded, setIllustrationLoaded] = useState(false);
 
-  // ---- QUESTION FLOW STATE ----
+  // -------------------------------
+  // FLOW STATE
+  // -------------------------------
   const [step, setStep] = useState(1);
   const [question, setQuestion] = useState<QuestionType | null>(null);
   const [history, setHistory] = useState<HistoryItem[]>([]);
@@ -24,13 +28,15 @@ export default function Home() {
     ? (question.step / MAX_STEPS) * 100
     : (step / MAX_STEPS) * 100;
 
-  // ---- FETCH NEXT QUESTION / FINAL STEP ----
+  // -------------------------------------
+  // FETCH NEXT QUESTION OR GENERATE
+  // -------------------------------------
   const fetchNextQuestion = async (choiceOverride?: "A" | "B") => {
     try {
       let updatedHistory = history;
       const finalChoice = choiceOverride ?? selectedChoice ?? undefined;
 
-      // Save last choice into history
+      // Save previous step choice
       if (finalChoice && question) {
         const chosenOption = question.options.find(
           (opt) => opt.key === finalChoice
@@ -52,7 +58,6 @@ export default function Home() {
 
       const nextStep = step + (finalChoice ? 1 : 0);
 
-      // Final step → generate blueprint
       if (nextStep > MAX_STEPS) {
         setLoadingBlueprint(true);
 
@@ -102,7 +107,9 @@ export default function Home() {
     }
   };
 
-  // ---- START FLOW ----
+  // -------------------------------------
+  // START FLOW
+  // -------------------------------------
   const startFlow = () => {
     setShowWizard(true);
     setHistory([]);
@@ -125,23 +132,16 @@ export default function Home() {
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-gray-900">
-      {/* ============================
-          PREMIUM STICKY HEADER
-      ============================ */}
+
+      {/* 🍃 Sticky Navbar */}
       <header className="premium-header">
         <div className="nav-container">
           <div className="nav-logo">NicheRoot</div>
 
           <nav className="nav-links">
-            <a href="#why" className="nav-link">
-              Why it works
-            </a>
-            <a href="#how" className="nav-link">
-              How it works
-            </a>
-            <a href="#who-its-for" className="nav-link">
-              Who it&apos;s for
-            </a>
+            <a href="#why" className="nav-link">Why it works</a>
+            <a href="#how" className="nav-link">How it works</a>
+            <a href="#who-its-for" className="nav-link">Who it's for</a>
           </nav>
 
           <button className="nav-btn" onClick={startFlow}>
@@ -152,11 +152,12 @@ export default function Home() {
 
       <div className="pt-24" />
 
-      {/* ============================
-          HERO SECTION
-      ============================ */}
+      {/* -------------------------------
+         HERO SECTION
+      -------------------------------- */}
       <section className="section bg-white-section">
         <div className="container flex flex-col lg:flex-row items-center gap-14">
+
           <div className="flex-1 max-w-xl">
             <p className="badge">Smart business matching for real-world constraints</p>
 
@@ -174,12 +175,11 @@ export default function Home() {
               <button className="primary-btn" onClick={startFlow}>
                 Start the 6 questions
               </button>
+
               <button
                 className="text-[var(--brand-500)] font-medium"
                 onClick={() =>
-                  document
-                    .getElementById("how")
-                    ?.scrollIntoView({ behavior: "smooth" })
+                  document.getElementById("how")?.scrollIntoView({ behavior: "smooth" })
                 }
               >
                 See how it works →
@@ -199,18 +199,17 @@ export default function Home() {
               alt="NicheRoot Illustration"
               width={560}
               height={380}
-              className={`hero-illustration ${
-                illustrationLoaded ? "opacity-100" : "opacity-0"
-              }`}
+              className={`hero-illustration ${illustrationLoaded ? "opacity-100" : "opacity-0"}`}
               onLoadingComplete={() => setIllustrationLoaded(true)}
             />
           </div>
+
         </div>
       </section>
 
-      {/* ============================
-          WHY SECTION
-      ============================ */}
+      {/* -------------------------------
+         WHY SECTION
+      -------------------------------- */}
       <section id="why" className="section bg-gray-section">
         <div className="container">
           <h2 className="section-title">Why NicheRoot works</h2>
@@ -242,9 +241,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ============================
-          HOW SECTION
-      ============================ */}
+      {/* -------------------------------
+         HOW SECTION
+      -------------------------------- */}
       <section id="how" className="section bg-white-section">
         <div className="container">
           <h2 className="section-title">How NicheRoot works</h2>
@@ -271,16 +270,16 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ============================
-          WHAT YOUR BLUEPRINT LOOKS LIKE
-      ============================ */}
+      {/* -------------------------------
+         BLUEPRINT EXAMPLES
+      -------------------------------- */}
       <section className="section bg-gray-section">
         <div className="container">
           <h2 className="section-title">What your blueprint looks like</h2>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mt-10 items-stretch">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mt-10">
             <div className="card">
-              <h4 className="font-semibold text-sm text-gray-700 uppercase tracking-wide">
+              <h4 className="font-semibold text-sm uppercase tracking-wide text-gray-700">
                 Built from your answers
               </h4>
 
@@ -291,7 +290,7 @@ export default function Home() {
               </ul>
 
               <p className="mt-5 text-gray-600">
-                Your blueprint adapts to your life — not vague “top 100 business ideas”.
+                Your blueprint adapts to your life — not vague “top 100 idea lists”.
               </p>
             </div>
 
@@ -317,31 +316,30 @@ export default function Home() {
 
               <h4 className="mt-6 text-sm font-semibold">First 30 days</h4>
               <ul className="mt-2 space-y-1 text-sm">
-                <li>• Define your core offer</li>
-                <li>• Validate with 3–5 conversations</li>
-                <li>• Create a simple landing page</li>
-                <li>• Get 2–3 paid test clients</li>
+                <li>• Define core offer</li>
+                <li>• Validate with conversations</li>
+                <li>• Build simple landing page</li>
+                <li>• Acquire first clients</li>
               </ul>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ============================
-          PREMIUM AI INPUT MODULE
-      ============================ */}
+      {/* -------------------------------
+         AI INPUT SECTION
+      -------------------------------- */}
       <section className="section bg-white-section">
         <div className="ai-input-wrapper">
           <h2 className="ai-input-title">Tell us about your situation</h2>
 
           <p className="ai-input-sub">
-            Be honest — the more real your description is, the more accurate your
-            blueprint becomes.
+            Be honest — the more real your description is, the more accurate your blueprint becomes.
           </p>
 
           <textarea
             className="ai-textarea"
-            placeholder="For example: • Your background or current work • Available hours weekly • Budget you can invest • What you want (and don’t want)"
+            placeholder="For example: background, hours, budget, goals, what you want or don't want"
             value={userInput}
             onChange={(e) => setUserInput(e.target.value)}
           />
@@ -352,9 +350,9 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ============================
-          WHO IT'S FOR
-      ============================ */}
+      {/* -------------------------------
+         WHO IT'S FOR
+      -------------------------------- */}
       <section id="who-its-for" className="section bg-gray-section">
         <div className="container">
           <h2 className="section-title">Who NicheRoot is for</h2>
@@ -372,7 +370,7 @@ export default function Home() {
 
             <div className="card">
               <h3 className="card-title">People who want a plan</h3>
-              <p>Your blueprint is based on real constraints, not fantasy.</p>
+              <p>Your blueprint is based on real constraints.</p>
             </div>
           </div>
 
@@ -384,17 +382,17 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ============================
-          FOOTER
-      ============================ */}
+      {/* -------------------------------
+         FOOTER
+      -------------------------------- */}
       <footer className="py-10 text-center text-sm text-gray-500">
         <p>NicheRoot — Smart business matching</p>
         <p>© {new Date().getFullYear()} NicheRoot. All rights reserved.</p>
       </footer>
 
-      {/* ============================
-          FULLSCREEN QUESTION WIZARD
-      ============================ */}
+      {/* -------------------------------
+         FULLSCREEN QUESTION MODAL
+      -------------------------------- */}
       <AnimatePresence>
         {showWizard && (
           <motion.div
@@ -456,8 +454,7 @@ export default function Home() {
                       {question.question}
                     </h2>
                     <p className="text-sm text-gray-500">
-                      Choose the option that feels most aligned with your real life — not
-                      what you think you “should” pick.
+                      Choose the option that fits your real life — not what you think you “should” do.
                     </p>
                   </div>
 
@@ -488,19 +485,19 @@ export default function Home() {
                           : "bg-gray-200 text-gray-500 cursor-not-allowed"
                       }`}
                       disabled={!selectedChoice || loadingBlueprint}
-                      onClick={() =>
-                        selectedChoice && fetchNextQuestion(selectedChoice)
-                      }
+                      onClick={() => selectedChoice && fetchNextQuestion(selectedChoice)}
                     >
                       Continue
                     </button>
                   </div>
+
                 </div>
               )}
             </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
+
     </main>
   );
 }
