@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import OptionCard from "../components/OptionCard";
+import OptionCard from "@/components/OptionCard";
 import { QuestionType, HistoryItem } from "@/types/question-types";
 
 const MAX_STEPS = 6;
@@ -40,7 +40,7 @@ export default function Home() {
 
     const nextStep = step + (selectedChoice ? 1 : 0);
 
-    // FINAL STEP → GENERATE BLUEPRINT
+    // If final step → generate blueprint
     if (nextStep > MAX_STEPS) {
       setLoadingBlueprint(true);
 
@@ -59,7 +59,7 @@ export default function Home() {
       return;
     }
 
-    // GET NEXT QUESTION
+    // Fetch next question
     const res = await fetch("/api/next-question", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -81,38 +81,43 @@ export default function Home() {
   const startFlow = () => {
     fetchNextQuestion();
   };
-
   return (
-    <main className="min-h-screen bg-black text-white px-4 py-8">
-      <div className="max-w-3xl mx-auto">
+    <main className="min-h-screen bg-[#F7F8FA] text-gray-900">
+      <div className="max-w-4xl mx-auto px-6 py-16">
 
         {/* LOADING BLUEPRINT */}
         {loadingBlueprint && (
-          <div className="text-center mt-20">
-            <h2 className="text-3xl font-bold mb-4">
+          <div className="text-center mt-24">
+            <h2 className="text-3xl md:text-4xl font-semibold mb-4">
               Generating your business blueprint...
             </h2>
-            <p className="text-neutral-300">
-              I’m analyzing your answers and story to prepare your result.
+            <p className="text-gray-500">
+              Analyzing your answers and building a tailored plan for you.
             </p>
           </div>
         )}
 
-        {/* BLUEPRINT OUTPUT */}
+        {/* BLUEPRINT OUTPUT (will be moved to /blueprint later) */}
         {blueprint && !loadingBlueprint && (
-          <div className="space-y-6 mt-4">
+          <div className="space-y-8 mt-4">
+            <header className="space-y-3">
+              <p className="text-sm font-medium text-blue-600 uppercase tracking-wide">
+                Your personalized result
+              </p>
+              <h1 className="text-3xl md:text-4xl font-semibold">
+                {blueprint.title}
+              </h1>
+              <p className="text-gray-600">
+                {blueprint.summary}
+              </p>
+            </header>
 
-            <h1 className="text-4xl font-extrabold mb-2">
-              {blueprint.title}
-            </h1>
-            <p className="text-neutral-300 mb-6">{blueprint.summary}</p>
-
-            <section className="bg-neutral-900/60 border border-neutral-800 rounded-2xl p-5">
+            <section className="bg-white border border-gray-200 shadow-sm p-6 rounded-xl">
               <h2 className="text-xl font-semibold mb-2">Your Niche</h2>
               <p>{blueprint.nicheSuggestion}</p>
             </section>
 
-            <section className="bg-neutral-900/60 border border-neutral-800 rounded-2xl p-5">
+            <section className="bg-white border border-gray-200 shadow-sm p-6 rounded-xl">
               <h2 className="text-xl font-semibold mb-2">Monetization</h2>
               <ul className="list-disc ml-6 space-y-1">
                 {blueprint.monetization.map((m: string, i: number) => (
@@ -121,10 +126,8 @@ export default function Home() {
               </ul>
             </section>
 
-            <section className="bg-neutral-900/60 border border-neutral-800 rounded-2xl p-5">
-              <h2 className="text-xl font-semibold mb-2">
-                Step-by-step Actions
-              </h2>
+            <section className="bg-white border border-gray-200 shadow-sm p-6 rounded-xl">
+              <h2 className="text-xl font-semibold mb-2">Step-by-step Actions</h2>
               <ol className="list-decimal ml-6 space-y-1">
                 {blueprint.stepByStepGuide.map((s: string, i: number) => (
                   <li key={i}>{s}</li>
@@ -132,8 +135,8 @@ export default function Home() {
               </ol>
             </section>
 
-            <section className="bg-neutral-900/60 border border-neutral-800 rounded-2xl p-5">
-              <h2 className="text-xl font-semibold mb-2">Tools You’ll Need</h2>
+            <section className="bg-white border border-gray-200 shadow-sm p-6 rounded-xl">
+              <h2 className="text-xl font-semibold mb-2">Tools You'll Need</h2>
               <ul className="list-disc ml-6 space-y-1">
                 {blueprint.toolsNeeded.map((t: string, i: number) => (
                   <li key={i}>{t}</li>
@@ -141,7 +144,7 @@ export default function Home() {
               </ul>
             </section>
 
-            <section className="bg-neutral-900/60 border border-neutral-800 rounded-2xl p-5">
+            <section className="bg-white border border-gray-200 shadow-sm p-6 rounded-xl mb-8">
               <h2 className="text-xl font-semibold mb-2">Example Names</h2>
               <ul className="list-disc ml-6 space-y-1">
                 {blueprint.exampleNames.map((n: string, i: number) => (
@@ -152,40 +155,52 @@ export default function Home() {
           </div>
         )}
 
-        {/* FIRST INPUT SCREEN */}
+        {/* INTRO SCREEN */}
         {!question && !blueprint && !loadingBlueprint && (
-          <div className="mt-12 bg-neutral-900/60 border border-neutral-800 rounded-2xl p-6">
-            <h1 className="text-3xl font-bold mb-3">Tell me about you</h1>
-            <p className="text-neutral-300 text-sm mb-4">
-              This helps personalize your questions.
-            </p>
+          <div className="bg-white border border-gray-200 shadow-sm rounded-2xl p-8 md:p-10 mt-8 space-y-6">
+            <header className="space-y-2">
+              <h1 className="text-3xl md:text-4xl font-semibold">
+                Let’s find a business that fits you.
+              </h1>
+              <p className="text-gray-600">
+                Describe your background, skills, goals, budget, and what you want
+                from your next chapter.
+              </p>
+            </header>
 
             <textarea
-              className="w-full h-40 bg-black/40 p-3 border border-neutral-700 rounded-lg"
+              className="w-full h-40 md:h-48 p-4 border border-gray-300 rounded-xl shadow-sm 
+                         focus:ring-2 focus:ring-blue-500 focus:outline-none bg-white"
               value={userInput}
               onChange={(e) => setUserInput(e.target.value)}
-              placeholder="Write about your background, skills, goals, budget, etc."
+              placeholder="Write freely about your situation..."
             />
 
-            <button
-              onClick={startFlow}
-              className="mt-4 px-5 py-2.5 bg-white text-black rounded-lg hover:bg-neutral-200"
-            >
-              Start
-            </button>
+            <div className="flex justify-end">
+              <button
+                onClick={startFlow}
+                className="px-6 py-3 bg-blue-600 text-white rounded-xl font-medium
+                           hover:bg-blue-700 transition"
+              >
+                Start
+              </button>
+            </div>
           </div>
         )}
 
         {/* QUESTION SCREEN */}
         {question && !blueprint && !loadingBlueprint && (
-          <div className="mt-12 space-y-6">
-            <h2 className="text-2xl font-semibold">
-              Step {question.step} of {MAX_STEPS}
-            </h2>
+          <div className="mt-16 space-y-8">
+            <div className="space-y-2">
+              <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">
+                Step {question.step} of {MAX_STEPS}
+              </p>
+              <h2 className="text-2xl md:text-3xl font-semibold">
+                {question.question}
+              </h2>
+            </div>
 
-            <p className="text-lg">{question.question}</p>
-
-            <div className="grid grid-cols-1 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {question.options.map((opt) => (
                 <OptionCard
                   key={opt.key}
@@ -196,6 +211,7 @@ export default function Home() {
             </div>
           </div>
         )}
+
       </div>
     </main>
   );
