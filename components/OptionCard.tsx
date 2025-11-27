@@ -1,8 +1,8 @@
 "use client";
 
 import React from "react";
-import { OptionType } from "@/types/question-types";
 import { motion } from "framer-motion";
+import { OptionType } from "@/types/question-types";
 
 interface OptionCardProps {
   option: OptionType;
@@ -31,7 +31,7 @@ export default function OptionCard({ option, onSelect, selected }: OptionCardPro
             className={`h-2.5 w-2.5 rounded-full ${
               selected ? "bg-blue-600" : "bg-gray-400"
             }`}
-          ></div>
+          />
           <h3 className="text-lg md:text-xl font-semibold">{option.label}</h3>
         </div>
 
