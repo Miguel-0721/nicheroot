@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     const userInput: string = body.userInput ?? "";
     const history: HistoryItem[] = body.history ?? [];
 
-    // Generate the next question (placeholder for now)
+    // Generate next question with real content
     const nextQuestion = generateNextQuestion(step, history, userInput);
 
     return NextResponse.json({

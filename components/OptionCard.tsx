@@ -1,78 +1,82 @@
 "use client";
 
-import React from "react";
-import { OptionType } from "@/types/question-types";
-import { motion } from "framer-motion";
+import React, { useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Option } from "@/types/question-types";
 
-interface OptionCardProps {
-  option: OptionType;
-  onSelect: (key: "A" | "B") => void;
-  selected?: boolean;
+interface Props {
+  option: Option;
+  selected: boolean;
+  onSelect: () => void;
 }
 
-export default function OptionCard({ option, onSelect, selected }: OptionCardProps) {
+export default function OptionCard({ option, selected, onSelect }: Props) {
+  const [showDetails, setShowDetails] = useState(false);
+
   return (
     <motion.div
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={() => onSelect(option.key)}
-      className={`
-        cursor-pointer rounded-xl border p-5 transition-all
-        bg-white relative
-        shadow-sm
-        hover:shadow-md
+      whileHover={{ y: -3 }}
+      onClick={onSelect}
+      className={`w-full border rounded-2xl p-5 cursor-pointer transition-all bg-white 
         ${
           selected
-            ? "border-blue-600 ring-2 ring-blue-500/40 bg-blue-50"
-            : "border-gray-300 hover:border-blue-400"
+            ? "border-indigo-500 shadow-xl"
+            : "border-gray-200 hover:border-indigo-300 hover:shadow-md"
         }
       `}
     >
-      {/* Checkmark if selected */}
-      {selected && (
-        <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center shadow-md">
-          <svg
-            className="w-4 h-4 text-white"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="3"
-            strokeLinecap="round"
-            strokeLinejoin="round"
+      {/* Title Row */}
+      <div className="flex justify-between items-center mb-2">
+        <h3 className="text-lg font-semibold text-gray-900">{option.label}</h3>
+
+        <button
+          type="button"
+          className="text-indigo-600 text-sm font-medium hover:underline"
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowDetails(!showDetails);
+          }}
+        >
+          {showDetails ? "Hide" : "Details"}
+        </button>
+      </div>
+
+      {/* Summary */}
+      <p className="text-gray-600 text-sm mb-1">{option.summary}</p>
+
+      {/* Details dropdown */}
+      <AnimatePresence>
+        {showDetails && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-4 bg-indigo-50 rounded-xl p-4 text-sm text-gray-800"
           >
-            <path d="M5 13l4 4L19 7" />
-          </svg>
-        </div>
-      )}
+            <div className="mb-3">
+              <p className="font-semibold mb-1">Pros</p>
+              <ul className="list-disc ml-4 space-y-1">
+                {option.pros.map((p, i) => (
+                  <li key={i}>{p}</li>
+                ))}
+              </ul>
+            </div>
 
-      <h3 className="text-lg font-semibold mb-1 text-gray-900">{option.label}</h3>
+            <div className="mb-3">
+              <p className="font-semibold mb-1">Cons</p>
+              <ul className="list-disc ml-4 space-y-1">
+                {option.cons.map((c, i) => (
+                  <li key={i}>{c}</li>
+                ))}
+              </ul>
+            </div>
 
-      <p className="text-sm text-gray-600 mb-4">{option.description}</p>
-
-      {/* Pros */}
-      <div className="mt-3">
-        <p className="text-sm font-medium text-gray-700">Pros:</p>
-        <ul className="list-disc ml-5 text-sm text-gray-600 space-y-1">
-          {option.pros.map((pro, idx) => (
-            <li key={idx}>{pro}</li>
-          ))}
-        </ul>
-      </div>
-
-      {/* Cons */}
-      <div className="mt-4">
-        <p className="text-sm font-medium text-gray-700">Cons:</p>
-        <ul className="list-disc ml-5 text-sm text-gray-600 space-y-1">
-          {option.cons.map((con, idx) => (
-            <li key={idx}>{con}</li>
-          ))}
-        </ul>
-      </div>
-
-      {/* Example */}
-      <p className="mt-4 text-xs italic text-gray-500">
-        Example: {option.example}
-      </p>
+            <p className="italic text-xs text-gray-600">
+              Example: {option.example}
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 }

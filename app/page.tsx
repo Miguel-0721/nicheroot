@@ -429,113 +429,101 @@ export default function Home() {
         <p>© {new Date().getFullYear()} NicheRoot. All rights reserved.</p>
       </footer>
 
-      {/* -------------------------------
-         FULLSCREEN QUESTION MODAL
-      -------------------------------- */}
-      <AnimatePresence>
-        {showWizard && (
-          <motion.div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+
+   {/* -------------------------------
+   FULLSCREEN QUESTION MODAL
+-------------------------------- */}
+<AnimatePresence>
+  {showWizard && (
+    <motion.div className="modal-overlay"
+
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.div
+  className="modal-container"
+
+        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+        transition={{ duration: 0.2 }}
+      >
+
+        {/* Header */}
+        <div className="modal-header">
+
+          <div>
+            <p className="text-xs font-semibold text-gray-500 tracking-wide">
+              NICHE ROOT • GUIDED FLOW
+            </p>
+            <p className="text-sm text-gray-700">
+              Step {question ? question.step : step} of {MAX_STEPS}
+            </p>
+          </div>
+
+          <button
+            className="text-gray-500 hover:text-gray-800 text-xl"
+            onClick={closeWizard}
           >
-            <motion.div
-              className="w-full max-w-3xl rounded-2xl bg-white shadow-2xl p-6 md:p-8"
-              initial={{ opacity: 0, y: 20, scale: 0.98 }}
-              animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 20, scale: 0.98 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
-            >
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <p className="text-xs font-semibold uppercase text-gray-500">
-                    NicheRoot · Guided flow
-                  </p>
-                  <p className="text-sm text-gray-600">
-                    Step {question ? question.step : step} of {MAX_STEPS}
-                  </p>
-                </div>
+            ✕
+          </button>
+        </div>
 
-                <button
-                  onClick={closeWizard}
-                  className="text-gray-500 hover:text-gray-700 text-sm"
-                  disabled={loadingBlueprint}
-                >
-                  Close ✕
-                </button>
-              </div>
+        {/* Progress bar */}
+      <div className="modal-progress">
+    <div className="modal-progress-bar" style={{ width: `${progressPercent}%` }} />
+</div>
 
-              <div className="h-1.5 w-full bg-gray-200 rounded-full overflow-hidden mb-6">
-                <div
-                  className="h-full bg-blue-600 transition-all"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
+        {/* Content */}
+        {!question ? (
+          <p className="text-center py-10">Loading question…</p>
+        ) : (
+          <>
+            <h2 className="text-xl font-bold mb-2">{question.question}</h2>
 
-              {loadingBlueprint ? (
-                <div className="py-16 text-center">
-                  <p className="text-lg font-semibold mb-2">
-                    Generating your business blueprint...
-                  </p>
-                  <p className="text-gray-500">
-                    Analyzing your answers and building a plan for you.
-                  </p>
-                </div>
-              ) : !question ? (
-                <div className="py-16 text-center">
-                  <p className="text-gray-600 text-sm">Loading your first question...</p>
-                </div>
-              ) : (
-                <div className="space-y-6">
-                  <div>
-                    <h2 className="text-xl md:text-2xl font-semibold mb-1">
-                      {question.question}
-                    </h2>
-                    <p className="text-sm text-gray-500">
-                      Choose the option that fits your real life — not what you think you “should” do.
-                    </p>
-                  </div>
+            <p className="text-gray-600 text-sm mb-6">
+              Choose the option that fits your real life.
+            </p>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {question.options.map((opt) => (
-                      <OptionCard
-                        key={opt.key}
-                        option={opt}
-                        onSelect={() => setSelectedChoice(opt.key)}
-                        selected={selectedChoice === opt.key}
-                      />
-                    ))}
-                  </div>
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+  {question.options.map((opt) => (
+    <OptionCard
+      key={opt.key}
+      option={opt}
+      selected={selectedChoice === opt.key}
+      onSelect={() => setSelectedChoice(opt.key)}
+    />
+  ))}
+</div>
 
-                  <div className="flex justify-end gap-3 pt-4">
-                    <button
-                      className="px-4 py-2 text-sm rounded-lg border border-gray-300 text-gray-600 hover:bg-gray-50"
-                      onClick={closeWizard}
-                      disabled={loadingBlueprint}
-                    >
-                      Cancel
-                    </button>
 
-                    <button
-                      className={`px-5 py-2 text-sm rounded-lg font-semibold transition ${
-                        selectedChoice
-                          ? "bg-blue-600 text-white hover:bg-blue-700"
-                          : "bg-gray-200 text-gray-500 cursor-not-allowed"
-                      }`}
-                      disabled={!selectedChoice || loadingBlueprint}
-                      onClick={() => selectedChoice && fetchNextQuestion(selectedChoice)}
-                    >
-                      Continue
-                    </button>
-                  </div>
 
-                </div>
-              )}
-            </motion.div>
-          </motion.div>
+
+
+           <div className="modal-actions">
+    <button className="btn-secondary" onClick={closeWizard}>Cancel</button>
+
+    <button
+        className={`btn-primary ${!selectedChoice ? "disabled" : ""}`}
+        disabled={!selectedChoice}
+        onClick={() => selectedChoice && fetchNextQuestion(selectedChoice)}
+    >
+        Continue
+    </button>
+</div>
+
+          </>
         )}
-      </AnimatePresence>
+
+      </motion.div>
+    </motion.div>
+  )}
+</AnimatePresence>
+
+
+
+
 
     </main>
   );
