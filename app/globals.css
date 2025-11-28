@@ -17,7 +17,9 @@
   --card-shadow-lg: 0 12px 32px rgba(0,0,0,0.08);
 
   /* Layout */
-  --section-y: 7rem;
+  --section-y: 4.5rem;
+
+
   --container-width: 1280px;
 }
 
@@ -91,7 +93,7 @@ img {
 .section-title {
   font-size: 2.4rem;
   font-weight: 700;
-  margin-bottom: 1.4rem;
+  margin-bottom: 1.8rem;
 }
 
 .section-sub {
@@ -152,6 +154,12 @@ img {
   box-shadow: var(--card-shadow);
   transition: 0.25s ease;
 }
+
+/* Blueprint card alignment fix */
+.section-blueprint .card {
+  padding-bottom: 1.8rem;
+}
+
 
 .card:hover {
   transform: translateY(-3px);
@@ -324,4 +332,80 @@ img {
 
 .nav-btn:hover {
   filter: brightness(1.1);
+}
+.hero-img-wrapper {
+  margin-top: 1.8rem;
+}
+.section-blueprint {
+  padding-top: 3.5rem !important;  /* default 4.5rem → now slightly tighter */
+}
+.section-ai {
+  padding-top: 3rem !important;   /* default 4.5rem → slightly reduced */
+}
+/* AI HEADER ICON */
+.ai-icon {
+  display: block;
+  font-size: 2.3rem;
+  margin-bottom: 0.4rem;
+  text-align: center;
+}
+
+/* HINT LINE */
+.ai-input-hint {
+  text-align: center;
+  font-size: 0.95rem;
+  color: #777;
+  margin-top: -0.5rem;
+  margin-bottom: 2rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+}
+
+/* ANIMATED DOT */
+.ai-dot {
+  width: 7px;
+  height: 7px;
+  background: var(--brand-500);
+  border-radius: 50%;
+  animation: pulse 1.6s infinite;
+}
+
+@keyframes pulse {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.6); opacity: 0.4; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* ENHANCED WRAPPER */
+.ai-input-wrapper {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 3.5rem 2.4rem;
+  background: white;
+  border-radius: 24px;
+  box-shadow: 0 14px 45px rgba(0,0,0,0.06);
+  transition: box-shadow 0.2s ease;
+}
+
+.ai-input-wrapper:hover {
+  box-shadow: 0 16px 55px rgba(0,0,0,0.08);
+}
+
+/* TEXTAREA FOCUS GLOW */
+.ai-textarea:focus {
+  border-color: var(--brand-500);
+  box-shadow: 0 0 0 3px rgba(79,70,229,0.15);
+  outline: none;
+}
+
+/* BUTTON IMPROVEMENT */
+.ai-start-btn {
+  transform: translateY(0);
+}
+
+.ai-start-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(79,70,229,0.25);
 }

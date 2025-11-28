@@ -1,7 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+
 import { motion, AnimatePresence } from "framer-motion";
 import OptionCard from "@/components/OptionCard";
 
@@ -11,6 +12,27 @@ import { QuestionType, HistoryItem } from "@/types/question-types";
 const MAX_STEPS = 6;
 
 export default function Home() {
+
+  const placeholders = [
+    "Tell us about your background, skills, and goals...",
+    "How much time can you commit each week?",
+    "Do you prefer low risk or high income potential?",
+    "What lifestyle do you want your business to support?",
+    "Is there anything you want to avoid?"
+  ];
+
+  const [currentPlaceholder, setCurrentPlaceholder] = useState(placeholders[0]);
+
+  useEffect(() => {
+    let i = 0;
+    const interval = setInterval(() => {
+      i = (i + 1) % placeholders.length;
+      setCurrentPlaceholder(placeholders[i]);
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, []);
+
   const [illustrationLoaded, setIllustrationLoaded] = useState(false);
 
   // -------------------------------
@@ -187,7 +209,8 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex-1 flex justify-end">
+          <div className="flex-1 flex justify-end hero-img-wrapper">
+
             {!illustrationLoaded && (
               <div className="w-[560px] h-[360px] rounded-2xl bg-[#f3f4ff] flex items-center justify-center text-sm text-gray-500 shadow-md">
                 Loading illustration…
@@ -273,11 +296,13 @@ export default function Home() {
       {/* -------------------------------
          BLUEPRINT EXAMPLES
       -------------------------------- */}
-      <section className="section bg-gray-section">
+      <section className="section section-blueprint bg-gray-section">
+
         <div className="container">
           <h2 className="section-title">What your blueprint looks like</h2>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mt-10">
+         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 mt-10 items-start">
+
             <div className="card">
               <h4 className="font-semibold text-sm uppercase tracking-wide text-gray-700">
                 Built from your answers
@@ -326,29 +351,43 @@ export default function Home() {
         </div>
       </section>
 
-      {/* -------------------------------
-         AI INPUT SECTION
-      -------------------------------- */}
-      <section className="section bg-white-section">
-        <div className="ai-input-wrapper">
-          <h2 className="ai-input-title">Tell us about your situation</h2>
+    {/* ===============================
+    AI INPUT SECTION (PREMIUM)
+================================ */}
+<section className="section section-ai bg-white-section">
+  <div className="container">
+    <div className="ai-input-wrapper">
 
-          <p className="ai-input-sub">
-            Be honest — the more real your description is, the more accurate your blueprint becomes.
-          </p>
+      <h2 className="ai-input-title">
+        Tell us about your situation
+      </h2>
 
-          <textarea
-            className="ai-textarea"
-            placeholder="For example: background, hours, budget, goals, what you want or don't want"
-            value={userInput}
-            onChange={(e) => setUserInput(e.target.value)}
-          />
+      <p className="ai-input-sub">
+        This helps our AI understand your time, strengths, constraints, and goals.
+      </p>
 
-          <button className="ai-start-btn" onClick={startFlow}>
-            Start the 6 questions
-          </button>
-        </div>
-      </section>
+      <p className="ai-input-hint">
+        <span className="ai-dot"></span>
+        AI will analyze your description to tailor your blueprint.
+      </p>
+
+      <textarea
+        className="ai-textarea"
+        placeholder={currentPlaceholder}
+        value={userInput}
+        onChange={(e) => setUserInput(e.target.value)}
+      />
+
+      <button className="ai-start-btn" onClick={startFlow}>
+        Start the 6 questions
+      </button>
+
+    </div>
+  </div>
+</section>
+
+
+
 
       {/* -------------------------------
          WHO IT'S FOR
