@@ -1,355 +1,179 @@
 "use client";
 
-import React, { useMemo } from "react";
-import { useSearchParams, useRouter } from "next/navigation";
-
-/**
- * We keep the blueprint type loose on purpose so the page
- * doesn't crash if the API shape changes slightly.
- */
-type Blueprint = Record<string, any>;
-
-function safeArray(value: unknown): string[] {
-  if (!value) return [];
-  if (Array.isArray(value)) {
-    return value.filter((v) => typeof v === "string");
-  }
-  if (typeof value === "string") {
-    return [value];
-  }
-  return [];
-}
+import { useEffect, useState } from "react";
+import { BusinessBlueprint } from "@/types/blueprint-types";
 
 export default function BlueprintPage() {
-  const searchParams = useSearchParams();
-  const router = useRouter();
+  const [blueprint, setBlueprint] = useState<BusinessBlueprint | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  const { blueprint, error } = useMemo(() => {
-    const raw = searchParams.get("result");
-
-    if (!raw) {
-      return {
-        blueprint: null as Blueprint | null,
-        error: "No blueprint data found in the URL.",
-      };
-    }
-
+  useEffect(() => {
     try {
-      // Sometimes the result may already be decoded, so we try decodeURIComponent
-      // but fall back to raw if it fails.
-      let decoded = raw;
-      try {
-        decoded = decodeURIComponent(raw);
-      } catch {
-        // ignore and use raw
+      const stored = localStorage.getItem("nicheroot_blueprint");
+
+      if (!stored) {
+        setBlueprint(null);
+        setLoading(false);
+        return;
       }
 
-      const parsed = JSON.parse(decoded) as Blueprint;
-      return { blueprint: parsed, error: null as string | null };
-    } catch (e) {
-      console.error("Failed to parse blueprint:", e);
-      return {
-        blueprint: null as Blueprint | null,
-        error: "We couldn't read your blueprint data.",
-      };
+      const parsed = JSON.parse(stored);
+      setBlueprint(parsed);
+    } catch (err) {
+      console.error("Failed to load blueprint:", err);
+      setBlueprint(null);
+    } finally {
+      setLoading(false);
     }
-  }, [searchParams]);
+  }, []);
 
-  if (error || !blueprint) {
+  if (loading) {
     return (
-      <main className="min-h-screen bg-[#f5f5fa]">
-        <div className="max-w-4xl mx-auto px-4 py-16">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-10 space-y-6">
-            <h1 className="text-2xl font-semibold text-gray-900">
-              Something went wrong
-            </h1>
-            <p className="text-gray-600">
-              {error ??
-                "We couldn't load your business blueprint. Please go back and try generating it again."}
-            </p>
-            <button
-              onClick={() => router.push("/")}
-              className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-500 transition"
-            >
-              Back to start
-            </button>
-          </div>
+      <main className="min-h-screen flex items-center justify-center text-gray-500">
+        Loading your blueprint…
+      </main>
+    );
+  }
+
+  if (!blueprint) {
+    return (
+      <main className="min-h-screen flex items-center justify-center">
+        <div className="bg-white shadow-lg rounded-2xl p-10 max-w-xl text-center">
+          <h2 className="text-xl font-semibold mb-3 text-gray-800">
+            Something went wrong
+          </h2>
+          <p className="text-gray-600 mb-6">
+            No blueprint found. Please complete the questions again.
+          </p>
+          <a
+            href="/"
+            className="px-5 py-2 rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition"
+          >
+            Back to home
+          </a>
         </div>
       </main>
     );
   }
 
-  // Safely read all fields with fallbacks
-  const title: string =
-    blueprint.title ?? "Your Personalized Business Blueprint";
-  const subtitle: string =
-    blueprint.subtitle ??
-    "A focused, executable direction based on your answers.";
-
-  const situationSummary: string =
-    blueprint.situationSummary ??
-    blueprint.howWeSeeYourSituation ??
-    "This blueprint summarizes your constraints, preferences, and goals.";
-
-  const recommendedDirection: string =
-    blueprint.recommendedDirection ??
-    "Here is the recommended direction based on your answers.";
-
-  const businessModelSummary: string =
-    blueprint.businessModelSummary ??
-    blueprint.businessSummary ??
-    "This is the core business model we suggest you follow.";
-
-  const exampleOffers = safeArray(
-    blueprint.exampleOffers ?? blueprint.exampleOfferIdeas
-  );
-  const monetization = safeArray(blueprint.monetization);
-  const howToFindCustomers = safeArray(
-    blueprint.howToFindCustomers ?? blueprint.customerAcquisition
-  );
-  const stepByStepGuide = safeArray(
-    blueprint.stepByStepGuide ?? blueprint.executionSteps
-  );
-  const dayOneActions = safeArray(
-    blueprint.dayOneActions ?? blueprint.firstDayActions
-  );
-  const first30Days = safeArray(
-    blueprint.first30Days ?? blueprint.firstMonthPlan
-  );
-  const keyRisks = safeArray(blueprint.keyRisks ?? blueprint.risks);
-  const howToDeRisk = safeArray(
-    blueprint.howToDeRisk ?? blueprint.riskMitigation
-  );
-  const growthLevers = safeArray(
-    blueprint.growthLevers ?? blueprint.scalingIdeas
-  );
-
   return (
-    <main className="min-h-screen bg-[#f5f5fa]">
-      <div className="max-w-5xl mx-auto px-4 py-16">
-        {/* Header */}
-        <header className="mb-10 space-y-3">
-          <p className="text-xs font-semibold tracking-[0.2em] text-indigo-500 uppercase">
-            NICHEROOT — BUSINESS BLUEPRINT
-          </p>
-          <h1 className="text-3xl sm:text-4xl font-semibold text-gray-900 leading-tight">
-            {title}
-          </h1>
-          <p className="text-gray-600 max-w-3xl">{subtitle}</p>
-        </header>
+    <main className="min-h-screen bg-gray-50 py-16">
+      <div className="container max-w-4xl mx-auto px-4">
+        {/* TITLE */}
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">
+          {blueprint.title}
+        </h1>
 
-        {/* Situation */}
-        <section className="mb-8">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
-            <h2 className="text-sm font-semibold text-gray-900 mb-3">
-              How we see your situation
-            </h2>
-            <p className="text-gray-700 text-sm leading-relaxed">
-              {situationSummary}
-            </p>
-          </div>
+        <p className="text-lg text-gray-600 mb-12">
+          {blueprint.subtitle}
+        </p>
+
+        <section className="space-y-10">
+
+          <BlueprintSection
+            title="Your Situation Summary"
+            content={blueprint.situationSummary}
+          />
+
+          <BlueprintSection
+            title="Recommended Direction"
+            content={blueprint.recommendedDirection}
+          />
+
+          <BlueprintSection
+            title="Business Model Summary"
+            content={blueprint.businessModelSummary}
+          />
+
+          <BlueprintList
+            title="Example Offers"
+            items={blueprint.exampleOffers}
+          />
+
+          <BlueprintList
+            title="Monetization Options"
+            items={blueprint.monetization}
+          />
+
+          <BlueprintList
+            title="How to Find Customers"
+            items={blueprint.howToFindCustomers}
+          />
+
+          <BlueprintList
+            title="Step-by-Step Guide"
+            items={blueprint.stepByStepGuide}
+          />
+
+          <BlueprintList
+            title="Day One Actions"
+            items={blueprint.dayOneActions}
+          />
+
+          <BlueprintList
+            title="First 30 Days"
+            items={blueprint.first30Days}
+          />
+
+          <BlueprintList
+            title="Key Risks"
+            items={blueprint.keyRisks}
+          />
+
+          <BlueprintList
+            title="How to Reduce Risk"
+            items={blueprint.howToDeRisk}
+          />
+
+          <BlueprintList
+            title="Growth Levers"
+            items={blueprint.growthLevers}
+          />
+
         </section>
 
-        {/* 2-column top summary */}
-        <section className="mb-8 grid gap-6 md:grid-cols-2">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">
-              Recommended direction
-            </h3>
-            <p className="text-gray-700 text-sm leading-relaxed">
-              {recommendedDirection}
-            </p>
-          </div>
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">
-              Business model summary
-            </h3>
-            <p className="text-gray-700 text-sm leading-relaxed">
-              {businessModelSummary}
-            </p>
-          </div>
-        </section>
-
-        {/* Example offers + Monetization */}
-        <section className="mb-8 grid gap-6 md:grid-cols-2">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">
-              Example offers
-            </h3>
-            {exampleOffers.length > 0 ? (
-              <ul className="list-disc ml-5 space-y-1 text-sm text-gray-800">
-                {exampleOffers.map((item, i) => (
-                  <li key={i}>{item}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-gray-500">
-                Specific offer ideas will appear here based on your answers.
-              </p>
-            )}
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">
-              Monetization
-            </h3>
-            {monetization.length > 0 ? (
-              <ul className="list-disc ml-5 space-y-1 text-sm text-gray-800">
-                {monetization.map((item, i) => (
-                  <li key={i}>{item}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-gray-500">
-                Revenue streams and pricing levers will appear here.
-              </p>
-            )}
-          </div>
-        </section>
-
-        {/* Customers + Step-by-step */}
-        <section className="mb-8 grid gap-6 md:grid-cols-2">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">
-              How to find customers
-            </h3>
-            {howToFindCustomers.length > 0 ? (
-              <ul className="list-disc ml-5 space-y-1 text-sm text-gray-800">
-                {howToFindCustomers.map((item, i) => (
-                  <li key={i}>{item}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-gray-500">
-                Acquisition channels will show up here based on your blueprint.
-              </p>
-            )}
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">
-              Step-by-step guide
-            </h3>
-            {stepByStepGuide.length > 0 ? (
-              <ol className="list-decimal ml-5 space-y-1 text-sm text-gray-800">
-                {stepByStepGuide.map((step, i) => (
-                  <li key={i}>{step}</li>
-                ))}
-              </ol>
-            ) : (
-              <p className="text-sm text-gray-500">
-                A detailed execution sequence will be generated here.
-              </p>
-            )}
-          </div>
-        </section>
-
-        {/* Day-one + First 30 days */}
-        <section className="mb-8 grid gap-6 md:grid-cols-2">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">
-              Day-one actions
-            </h3>
-            {dayOneActions.length > 0 ? (
-              <ul className="list-disc ml-5 space-y-1 text-sm text-gray-800">
-                {dayOneActions.map((item, i) => (
-                  <li key={i}>{item}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-gray-500">
-                Immediate “today” tasks will be listed here.
-              </p>
-            )}
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">
-              First 30 days
-            </h3>
-            {first30Days.length > 0 ? (
-              <ul className="list-disc ml-5 space-y-1 text-sm text-gray-800">
-                {first30Days.map((item, i) => (
-                  <li key={i}>{item}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-gray-500">
-                A structured first-month plan will go here.
-              </p>
-            )}
-          </div>
-        </section>
-
-        {/* Risks + De-risk */}
-        <section className="mb-8 grid gap-6 md:grid-cols-2">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">
-              Key risks
-            </h3>
-            {keyRisks.length > 0 ? (
-              <ul className="list-disc ml-5 space-y-1 text-sm text-gray-800">
-                {keyRisks.map((item, i) => (
-                  <li key={i}>{item}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-gray-500">
-                The main failure modes for your business will be summarized
-                here.
-              </p>
-            )}
-          </div>
-
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">
-              How to de-risk it
-            </h3>
-            {howToDeRisk.length > 0 ? (
-              <ul className="list-disc ml-5 space-y-1 text-sm text-gray-800">
-                {howToDeRisk.map((item, i) => (
-                  <li key={i}>{item}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-gray-500">
-                Concrete strategies for reducing risk will be listed here.
-              </p>
-            )}
-          </div>
-        </section>
-
-        {/* Growth levers */}
-        <section className="mb-10">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6 sm:p-8">
-            <h3 className="text-sm font-semibold text-gray-900 mb-3">
-              Growth levers
-            </h3>
-            {growthLevers.length > 0 ? (
-              <ul className="list-disc ml-5 space-y-1 text-sm text-gray-800">
-                {growthLevers.map((item, i) => (
-                  <li key={i}>{item}</li>
-                ))}
-              </ul>
-            ) : (
-              <p className="text-sm text-gray-500">
-                When you are ready to scale, strategic levers will be suggested
-                here.
-              </p>
-            )}
-          </div>
-        </section>
-
-        {/* Footer button */}
-        <div className="flex justify-end">
-          <button
-            onClick={() => router.push("/")}
-            className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-gray-100 text-gray-800 text-sm font-medium hover:bg-gray-200 transition"
+        {/* BACK BUTTON */}
+        <div className="mt-14 text-center">
+          <a
+            href="/"
+            className="px-6 py-3 rounded-lg bg-indigo-500 text-white hover:bg-indigo-600 transition"
           >
-            Start over
-          </button>
+            Start Over
+          </a>
         </div>
       </div>
     </main>
+  );
+}
+
+/* -----------------------------------------
+   REUSABLE BLUEPRINT COMPONENTS
+------------------------------------------ */
+
+function BlueprintSection({ title, content }: { title: string; content: string }) {
+  if (!content) return null;
+
+  return (
+    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+      <h3 className="text-xl font-semibold text-gray-900 mb-3">{title}</h3>
+      <p className="text-gray-700 leading-relaxed whitespace-pre-line">
+        {content}
+      </p>
+    </div>
+  );
+}
+
+function BlueprintList({ title, items }: { title: string; items: string[] }) {
+  if (!items || items.length === 0) return null;
+
+  return (
+    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+      <h3 className="text-xl font-semibold text-gray-900 mb-4">{title}</h3>
+      <ul className="list-disc ml-6 space-y-2 text-gray-700 leading-relaxed">
+        {items.map((item, i) => (
+          <li key={i}>{item}</li>
+        ))}
+      </ul>
+    </div>
   );
 }

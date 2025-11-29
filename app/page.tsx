@@ -88,85 +88,94 @@ export default function Home() {
   }, [showWizard, question, userInput]);
 
   const handleContinue = async () => {
-    if (!question || !selectedChoice) return;
-    if (loadingBlueprint || loadingQuestion) return;
+  if (!question || !selectedChoice) return;
+  if (loadingBlueprint || loadingQuestion) return;
 
-    try {
-      setLoadingQuestion(true);
+  try {
+    setLoadingQuestion(true);
 
-      const chosenOption = question.options.find(
-        (opt) => opt.key === selectedChoice
-      );
+    const chosenOption = question.options.find(
+      (opt) => opt.key === selectedChoice
+    );
 
-      const updatedHistory: HistoryItem[] = chosenOption
-        ? [
-            ...history,
-            {
-              step: question.step,
-              question: question.question,
-              choice: selectedChoice,
-              optionLabel: chosenOption.label,
-            },
-          ]
-        : history;
+    const updatedHistory: HistoryItem[] = chosenOption
+      ? [
+          ...history,
+          {
+            step: question.step,
+            question: question.question,
+            choice: selectedChoice,
+            optionLabel: chosenOption.label,
+          },
+        ]
+      : history;
 
-      const nextStep = question.step + 1;
+    const nextStep = question.step + 1;
 
-      // Finished all steps → generate blueprint
-      if (nextStep > MAX_STEPS) {
-        setLoadingBlueprint(true);
+    // FINISHED ALL STEPS → GENERATE BLUEPRINT
+    if (nextStep > MAX_STEPS) {
+      setLoadingBlueprint(true);
 
-        const res = await fetch("/api/generate-blueprint", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userInput,
-            history: updatedHistory,
-          }),
-        });
+      console.log("Sending blueprint request...", {
+        userInput,
+        updatedHistory,
+      });
 
-        const data = await res.json();
-
-        if (typeof window !== "undefined" && data?.blueprint) {
-          localStorage.setItem(
-            "nicheroot_blueprint",
-            JSON.stringify(data.blueprint)
-          );
-        }
-
-        setLoadingBlueprint(false);
-        setShowWizard(false);
-        // You already planned a /blueprint page
-        window.location.href = "/blueprint";
-        return;
-      }
-
-      // Otherwise → fetch the next question
-      const res = await fetch("/api/next-question", {
+      const res = await fetch("/api/generate-blueprint", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          step: nextStep,
-          history: updatedHistory,
           userInput,
-          choice: selectedChoice,
+          history: updatedHistory,
         }),
       });
 
       const data = await res.json();
 
-      if (data?.success && data.question) {
-        setHistory(updatedHistory);
-        setQuestion(data.question);
-        setStep(data.question.step ?? nextStep);
-        setSelectedChoice(null);
+      console.log("Blueprint API returned:", data);
+
+      if (typeof window !== "undefined" && data?.blueprint) {
+        localStorage.setItem(
+          "nicheroot_blueprint",
+          JSON.stringify(data.blueprint)
+        );
+      } else {
+        console.error("❌ No blueprint returned from API!");
       }
-    } catch (error) {
-      console.error("Error in handleContinue:", error);
-    } finally {
-      setLoadingQuestion(false);
+
+      setLoadingBlueprint(false);
+      setShowWizard(false);
+      window.location.href = "/blueprint";
+      return;
     }
-  };
+
+    // OTHERWISE — FETCH NEXT QUESTION
+    const res = await fetch("/api/next-question", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        step: nextStep,
+        history: updatedHistory,
+        userInput,
+        choice: selectedChoice,
+      }),
+    });
+
+    const data = await res.json();
+
+    if (data?.success && data.question) {
+      setHistory(updatedHistory);
+      setQuestion(data.question);
+      setStep(data.question.step ?? nextStep);
+      setSelectedChoice(null);
+    }
+  } catch (error) {
+    console.error("Error in handleContinue:", error);
+  } finally {
+    setLoadingQuestion(false);
+  }
+};
+
 
   const startFlow = () => {
     setShowWizard(true);
