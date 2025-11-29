@@ -1,78 +1,98 @@
-// app/api/generate-blueprint/route.ts
+// /app/api/generate-blueprint/route.ts
 
 import { NextResponse } from "next/server";
-import { HistoryItem } from "@/types/question-types";
-import { buildQuestionSummary } from "@/lib/generateQuestion";
+import OpenAI from "openai";
+import { BusinessBlueprint } from "@/types/blueprint-types";
+
+// Helper: extract JSON from model output
+function extractJson(content: string): any {
+  try {
+    const match = content.match(/\{[\s\S]*\}/);
+    if (!match) return {};
+    return JSON.parse(match[0]);
+  } catch (e) {
+    console.error("Failed to parse JSON from OpenAI:", content);
+    return {};
+  }
+}
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+    const userInput = body.userInput ?? "";
+    const history = body.history ?? [];
 
-    const userInput: string = body.userInput ?? "";
-    const history: HistoryItem[] = body.history ?? [];
+    const client = new OpenAI({
+      apiKey: process.env.OPENAI_API_KEY!,
+    });
 
-    // Build compact readable summary from answered A/B questions
-    const questionSummary = buildQuestionSummary(history);
+    const prompt = `
+You are an AI that generates a structured business blueprint.
 
-    // --------------------------------------
-    // 🚧 Placeholder Blueprint (No AI Yet)
-    // --------------------------------------
-    // Will be replaced with OpenAI:
-    // const openaiRes = await client.chat.completions.create({ ... })
-    // --------------------------------------
+Return ONLY valid JSON in the following format:
 
-    const blueprint = {
-      title: "Your Personalized Business Blueprint (Placeholder)",
+{
+  "title": "...",
+  "subtitle": "...",
+  "situationSummary": "...",
+  "recommendedDirection": "...",
+  "businessModelSummary": "...",
+  "exampleOffers": ["...", "..."],
+  "monetization": ["...", "..."],
+  "howToFindCustomers": ["...", "..."],
+  "stepByStepGuide": ["...", "..."],
+  "dayOneActions": ["...", "..."],
+  "first30Days": ["...", "..."],
+  "keyRisks": ["...", "..."],
+  "howToDeRisk": ["...", "..."],
+  "growthLevers": ["...", "..."]
+}
 
-      summary:
-        "This is a placeholder blueprint. Later this will use AI to analyze your answers, constraints, personality, goals, and budget.",
+User input:
+${userInput}
 
-      userDescription: userInput,
-      decisionsOverview: questionSummary,
+Choices history:
+${JSON.stringify(history)}
+`;
 
-      totalStepsAnswered: history.length,
-      decisions: history.map((h) => ({
-        step: h.step,
-        question: h.question,
-        chosen: h.optionLabel,
-      })),
+    const completion = await client.responses.create({
+      model: "gpt-4.1-mini",
+      input: prompt,
+    });
 
-      nicheSuggestion: "Example Digital Service (Placeholder)",
+    // Extract model raw output
+    const raw = completion.output_text ?? "";
 
-      monetization: [
-        "Monthly Retainers",
-        "Digital Packages",
-        "Upsells & Add-ons",
-      ],
+    // Parse JSON from model output
+    const blueprint: BusinessBlueprint = extractJson(raw);
 
-      demandLevel: "High (placeholder)",
-      competitionLevel: "Medium (placeholder)",
-
-      stepByStepGuide: [
-        "Define your core offer",
-        "Study 5 competitors",
-        "Build your landing page",
-        "Publish sample work",
-        "Start cold outreach",
-      ],
-
-      toolsNeeded: ["Canva", "Notion", "Stripe", "Simple landing page builder"],
-
-      exampleNames: ["NicheRoot Studio", "ClarityOps", "BrightStart Labs"],
+    // Build a SAFE object (never undefined / never crashes UI)
+    const finalBlueprint: BusinessBlueprint = {
+      title: blueprint.title ?? "",
+      subtitle: blueprint.subtitle ?? "",
+      situationSummary: blueprint.situationSummary ?? "",
+      recommendedDirection: blueprint.recommendedDirection ?? "",
+      businessModelSummary: blueprint.businessModelSummary ?? "",
+      exampleOffers: Array.isArray(blueprint.exampleOffers) ? blueprint.exampleOffers : [],
+      monetization: Array.isArray(blueprint.monetization) ? blueprint.monetization : [],
+      howToFindCustomers: Array.isArray(blueprint.howToFindCustomers) ? blueprint.howToFindCustomers : [],
+      stepByStepGuide: Array.isArray(blueprint.stepByStepGuide) ? blueprint.stepByStepGuide : [],
+      dayOneActions: Array.isArray(blueprint.dayOneActions) ? blueprint.dayOneActions : [],
+      first30Days: Array.isArray(blueprint.first30Days) ? blueprint.first30Days : [],
+      keyRisks: Array.isArray(blueprint.keyRisks) ? blueprint.keyRisks : [],
+      howToDeRisk: Array.isArray(blueprint.howToDeRisk) ? blueprint.howToDeRisk : [],
+      growthLevers: Array.isArray(blueprint.growthLevers) ? blueprint.growthLevers : []
     };
 
     return NextResponse.json({
       success: true,
-      blueprint,
+      blueprint: finalBlueprint,
     });
-  } catch (error) {
-    console.error("Blueprint API Error:", error);
 
+  } catch (err) {
+    console.error("Error in /api/generate-blueprint:", err);
     return NextResponse.json(
-      {
-        success: false,
-        error: "Blueprint server error",
-      },
+      { success: false, error: "Server error while generating blueprint" },
       { status: 500 }
     );
   }
