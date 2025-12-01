@@ -59,14 +59,12 @@ export default function BlueprintPage() {
   return (
     <main className="min-h-screen bg-gray-50 py-16">
       <div className="container max-w-4xl mx-auto px-4">
-        {/* TITLE */}
+
         <h1 className="text-3xl font-bold text-gray-900 mb-2">
           {blueprint.title}
         </h1>
 
-        <p className="text-lg text-gray-600 mb-12">
-          {blueprint.subtitle}
-        </p>
+        <p className="text-lg text-gray-600 mb-12">{blueprint.subtitle}</p>
 
         <section className="space-y-10">
 
@@ -86,7 +84,7 @@ export default function BlueprintPage() {
           />
 
           <BlueprintList
-            title="Example Offers"
+            title="Offer Examples"
             items={blueprint.exampleOffers}
           />
 
@@ -132,7 +130,6 @@ export default function BlueprintPage() {
 
         </section>
 
-        {/* BACK BUTTON */}
         <div className="mt-14 text-center">
           <a
             href="/"
@@ -146,13 +143,12 @@ export default function BlueprintPage() {
   );
 }
 
-/* -----------------------------------------
-   REUSABLE BLUEPRINT COMPONENTS
------------------------------------------- */
+/* ------------------------------
+   COMPONENTS
+------------------------------ */
 
 function BlueprintSection({ title, content }: { title: string; content: string }) {
   if (!content) return null;
-
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
       <h3 className="text-xl font-semibold text-gray-900 mb-3">{title}</h3>

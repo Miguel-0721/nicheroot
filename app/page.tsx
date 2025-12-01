@@ -10,7 +10,7 @@ import { QuestionType, HistoryItem } from "@/types/question-types";
 const MAX_STEPS = 6;
 
 export default function Home() {
-  // Rotating helper text for the intro textarea
+  // Rotating helper text
   const placeholders = [
     "Tell us about your background, skills, and goals...",
     "How much time can you commit each week?",
@@ -19,8 +19,7 @@ export default function Home() {
     "Is there anything you want to avoid?",
   ];
 
-  const [currentPlaceholder, setCurrentPlaceholder] =
-    useState(placeholders[0]);
+  const [currentPlaceholder, setCurrentPlaceholder] = useState(placeholders[0]);
 
   useEffect(() => {
     let i = 0;
@@ -32,7 +31,7 @@ export default function Home() {
     return () => clearInterval(interval);
   }, []);
 
-  // UI & flow state
+  // FLOW STATE
   const [illustrationLoaded, setIllustrationLoaded] = useState(false);
 
   const [step, setStep] = useState(1);
@@ -49,10 +48,25 @@ export default function Home() {
     ? (question.step / MAX_STEPS) * 100
     : (step / MAX_STEPS) * 100;
 
-  // Load the very first A/B question when the wizard opens
+  // 🔥 FIX: Normalize backend structure so options always exists
+  function normalizeQuestion(raw: any) {
+    if (!raw) return null;
+
+    // Already correct
+    if (Array.isArray(raw.options)) return raw;
+
+    // Convert { optionA, optionB } → options[]
+    const opts = [];
+    if (raw.optionA) opts.push(raw.optionA);
+    if (raw.optionB) opts.push(raw.optionB);
+
+    return { ...raw, options: opts };
+  }
+
+  // Load first question when wizard opens
   useEffect(() => {
     if (!showWizard) return;
-    if (question) return; // already loaded a question
+    if (question) return;
 
     const fetchInitialQuestion = async () => {
       try {
@@ -72,8 +86,9 @@ export default function Home() {
         const data = await res.json();
 
         if (data?.success && data.question) {
-          setQuestion(data.question);
-          setStep(data.question.step ?? 1);
+          const normalized = normalizeQuestion(data.question);
+          setQuestion(normalized);
+          setStep(normalized.step ?? 1);
           setHistory([]);
           setSelectedChoice(null);
         }
@@ -87,95 +102,87 @@ export default function Home() {
     fetchInitialQuestion();
   }, [showWizard, question, userInput]);
 
+  // Handles Continue button logic
   const handleContinue = async () => {
-  if (!question || !selectedChoice) return;
-  if (loadingBlueprint || loadingQuestion) return;
+    if (!question || !selectedChoice) return;
+    if (loadingBlueprint || loadingQuestion) return;
 
-  try {
-    setLoadingQuestion(true);
+    try {
+      setLoadingQuestion(true);
 
-    const chosenOption = question.options.find(
-      (opt) => opt.key === selectedChoice
-    );
+      const chosenOption = question.options.find(
+        (opt) => opt.key === selectedChoice
+      );
 
-    const updatedHistory: HistoryItem[] = chosenOption
-      ? [
-          ...history,
-          {
-            step: question.step,
-            question: question.question,
-            choice: selectedChoice,
-            optionLabel: chosenOption.label,
-          },
-        ]
-      : history;
+      const updatedHistory: HistoryItem[] = chosenOption
+        ? [
+            ...history,
+            {
+              step: question.step,
+              question: question.question,
+              choice: selectedChoice,
+              optionLabel: chosenOption.label,
+            },
+          ]
+        : history;
 
-    const nextStep = question.step + 1;
+      const nextStep = question.step + 1;
 
-    // FINISHED ALL STEPS → GENERATE BLUEPRINT
-    if (nextStep > MAX_STEPS) {
-      setLoadingBlueprint(true);
+      // FINISHED → GENERATE BLUEPRINT
+      if (nextStep > MAX_STEPS) {
+        setLoadingBlueprint(true);
 
-      console.log("Sending blueprint request...", {
-        userInput,
-        updatedHistory,
-      });
+        const res = await fetch("/api/generate-blueprint", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userInput,
+            history: updatedHistory,
+          }),
+        });
 
-      const res = await fetch("/api/generate-blueprint", {
+        const data = await res.json();
+
+        if (typeof window !== "undefined" && data?.blueprint) {
+          localStorage.setItem(
+            "nicheroot_blueprint",
+            JSON.stringify(data.blueprint)
+          );
+        }
+
+        setLoadingBlueprint(false);
+        setShowWizard(false);
+        window.location.href = "/blueprint";
+        return;
+      }
+
+      // OTHERWISE → FETCH NEXT QUESTION
+      const res = await fetch("/api/next-question", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          userInput,
+          step: nextStep,
           history: updatedHistory,
+          userInput,
+          choice: selectedChoice,
         }),
       });
 
       const data = await res.json();
 
-      console.log("Blueprint API returned:", data);
-
-      if (typeof window !== "undefined" && data?.blueprint) {
-        localStorage.setItem(
-          "nicheroot_blueprint",
-          JSON.stringify(data.blueprint)
-        );
-      } else {
-        console.error("❌ No blueprint returned from API!");
+      if (data?.success && data.question) {
+        const normalized = normalizeQuestion(data.question);
+        setHistory(updatedHistory);
+        setQuestion(normalized);
+        setStep(normalized.step ?? nextStep);
+        setSelectedChoice(null);
       }
-
-      setLoadingBlueprint(false);
-      setShowWizard(false);
-      window.location.href = "/blueprint";
-      return;
+    } catch (error) {
+      console.error("Error in handleContinue:", error);
+    } finally {
+      setLoadingQuestion(false);
     }
-
-    // OTHERWISE — FETCH NEXT QUESTION
-    const res = await fetch("/api/next-question", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        step: nextStep,
-        history: updatedHistory,
-        userInput,
-        choice: selectedChoice,
-      }),
-    });
-
-    const data = await res.json();
-
-    if (data?.success && data.question) {
-      setHistory(updatedHistory);
-      setQuestion(data.question);
-      setStep(data.question.step ?? nextStep);
-      setSelectedChoice(null);
-    }
-  } catch (error) {
-    console.error("Error in handleContinue:", error);
-  } finally {
-    setLoadingQuestion(false);
-  }
-};
-
+  };
 
   const startFlow = () => {
     setShowWizard(true);
@@ -220,10 +227,9 @@ export default function Home() {
         </div>
       </header>
 
-      {/* HERO SECTION */}
+      {/* HERO */}
       <section className="bg-white-section pt-24 pb-20">
         <div className="container flex flex-col lg:flex-row items-center gap-14">
-          {/* TEXT SIDE */}
           <div className="flex-1 max-w-xl">
             <p className="badge">
               Smart business matching for real-world constraints
@@ -236,8 +242,7 @@ export default function Home() {
 
             <p className="hero-sub">
               NicheRoot analyzes your time, money, strengths, goals, and
-              personality, then creates a personalized business direction and
-              execution blueprint.
+              personality, then creates a personalized business direction.
             </p>
 
             <div className="flex flex-wrap items-center gap-4 mt-8">
@@ -258,7 +263,6 @@ export default function Home() {
             </div>
           </div>
 
-          {/* IMAGE SIDE */}
           <div className="flex-1 flex justify-end hero-img-wrapper">
             {!illustrationLoaded && (
               <div className="w-[560px] h-[360px] rounded-2xl bg-[#f3f4ff] flex items-center justify-center text-sm text-gray-500 shadow-md">
@@ -285,9 +289,8 @@ export default function Home() {
         <div className="container">
           <h2 className="section-title">Why NicheRoot works</h2>
           <p className="section-sub">
-            Most people fail not because they lack talent, but because they
-            choose a direction that doesn’t fit their life. NicheRoot solves
-            this with smart guided trade-off questions.
+            Most people fail because they pick a business that doesn’t fit their
+            life. NicheRoot fixes that with smart guided questions.
           </p>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-7 mt-10">
@@ -300,18 +303,17 @@ export default function Home() {
             <div className="card">
               <div className="icon">🔍</div>
               <h3 className="card-title">Smart decision engine</h3>
-              <p>6 guided A/B trade-off questions – not endless idea lists.</p>
+              <p>6 guided A/B questions reveal your ideal direction.</p>
             </div>
 
             <div className="card">
               <div className="icon">✔️</div>
               <h3 className="card-title">Actionable blueprint</h3>
-              <p>A niche, monetization system, and roadmap tailored to you.</p>
+              <p>A niche and roadmap tailored to your real life.</p>
             </div>
           </div>
         </div>
       </section>
-
       {/* HOW SECTION */}
       <section id="how" className="section bg-white-section">
         <div className="container">
@@ -439,7 +441,7 @@ export default function Home() {
 
             <div className="card">
               <h3 className="card-title">People who value time</h3>
-              <p>No fluff – just what matters.</p>
+              <p>No fluff — just what matters.</p>
             </div>
 
             <div className="card">
@@ -461,10 +463,7 @@ export default function Home() {
         <p>NicheRoot — Smart business matching</p>
         <p>© {new Date().getFullYear()} NicheRoot. All rights reserved.</p>
       </footer>
-
-      {/* MODAL WIZARD */}
-  {/* MODAL WIZARD */}
-{/* MODAL WIZARD */}
+   {/* MODAL WIZARD */}
 <AnimatePresence>
   {showWizard && (
     <motion.div
@@ -474,17 +473,25 @@ export default function Home() {
       exit={{ opacity: 0 }}
     >
       <motion.div
-        className="w-full max-w-4xl bg-white rounded-3xl shadow-2xl p-6 md:p-10 relative"
-        initial={{ opacity: 0, scale: 0.95, y: 10 }}
+        className="
+          w-full max-w-4xl 
+          bg-white 
+          rounded-3xl 
+          shadow-2xl 
+          p-6 md:p-10 
+          relative 
+          max-h-[90vh] 
+          overflow-y-auto
+        "
+        initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 10 }}
+        exit={{ opacity: 0, scale: 0.95, y: 15 }}
         transition={{ duration: 0.25 }}
       >
         {/* CLOSE BUTTON */}
         <button
           className={`absolute right-5 top-5 h-10 w-10 flex items-center justify-center rounded-full border border-gray-300 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition
-            ${loadingBlueprint ? "opacity-60 cursor-not-allowed" : ""}
-          `}
+            ${loadingBlueprint ? "opacity-60 cursor-not-allowed" : ""}`}
           onClick={closeWizard}
           disabled={loadingBlueprint}
         >
@@ -494,7 +501,7 @@ export default function Home() {
         {/* HEADER + PROGRESS */}
         <div className="mb-10">
           <p className="text-[11px] font-semibold uppercase tracking-widest text-indigo-600">
-            NicheRoot — Guided Decision Flow
+            NICHE ROOT — GUIDED DECISION FLOW
           </p>
 
           <h2 className="text-xl font-semibold text-gray-800 mt-2">
@@ -514,9 +521,9 @@ export default function Home() {
           </p>
         </div>
 
-        {/* QUESTION CONTENT WITH SMOOTH SLIDE TRANSITIONS */}
+        {/* QUESTION CONTENT */}
         <AnimatePresence mode="wait">
-          {(!question || loadingQuestion) ? (
+          {!question || loadingQuestion ? (
             <motion.div
               key={"loading"}
               initial={{ opacity: 0 }}
@@ -534,7 +541,7 @@ export default function Home() {
               exit={{ opacity: 0, x: -35 }}
               transition={{ duration: 0.25, ease: "easeOut" }}
             >
-              {/* QUESTION TEXT */}
+              {/* QUESTION TITLE */}
               <h3 className="text-xl font-semibold text-gray-900 mb-3 leading-snug">
                 {question.question}
               </h3>
@@ -543,7 +550,7 @@ export default function Home() {
                 Choose the option that best aligns with your life and goals.
               </p>
 
-              {/* OPTION CARDS */}
+              {/* OPTIONS */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {question.options.map((opt) => (
                   <OptionCard
@@ -567,14 +574,15 @@ export default function Home() {
 
                 <button
                   onClick={handleContinue}
-                  disabled={!selectedChoice || loadingBlueprint || loadingQuestion}
+                  disabled={
+                    !selectedChoice || loadingBlueprint || loadingQuestion
+                  }
                   className={`px-6 py-2 rounded-lg text-white text-sm font-medium transition
                     ${
                       !selectedChoice || loadingBlueprint || loadingQuestion
                         ? "bg-indigo-300 cursor-not-allowed"
                         : "bg-indigo-600 hover:bg-indigo-700"
-                    }
-                  `}
+                    }`}
                 >
                   {loadingBlueprint
                     ? "Generating…"
@@ -592,6 +600,6 @@ export default function Home() {
 </AnimatePresence>
 
 
-    </main>
+   </main>
   );
 }

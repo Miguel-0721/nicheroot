@@ -1,118 +1,163 @@
+// /app/api/next-question/route.ts
+
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
+import { HistoryItem } from "@/types/question-types";
 
-const openai = new OpenAI({
+const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-// Extract JSON safely from GPT response
-function extractJson(text: string) {
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) {
-    throw new Error("JSON not found in OpenAI response");
+// Extract JSON safely
+function extractJson(content: string) {
+  try {
+    const match = content.match(/\{[\s\S]*\}/);
+    if (!match) return null;
+    return JSON.parse(match[0]);
+  } catch (e) {
+    console.error("❌ Failed JSON parse:", e);
+    return null;
   }
-  return JSON.parse(match[0]);
 }
 
-// FINAL 6 DIMENSIONS
-const DIMENSIONS = [
-  { id: "lifestyle_pace", label: "Business pace and lifestyle alignment" },
-  { id: "skills_vs_capital", label: "Skill-driven vs capital-driven approach" },
-  { id: "involvement_level", label: "Active involvement vs strategic oversight" },
-  { id: "digital_vs_physical", label: "Digital-first vs physical/local business" },
-  { id: "risk_profile", label: "Innovative vs proven business model" },
-  { id: "solo_vs_social", label: "Solo work vs client-facing work" }
-];
+interface RequestPayload {
+  step: number;
+  userInput: string;
+  history: HistoryItem[];
+  choice?: "A" | "B" | null;
+}
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { step, history, userInput } = body;
+    const body = (await req.json()) as RequestPayload;
 
-    const MAX_STEPS = DIMENSIONS.length;
+    const step = body.step ?? 1;
+    const userInput = body.userInput ?? "";
+    const history = body.history ?? [];
 
-    if (step > MAX_STEPS) {
-      return NextResponse.json({ success: true, done: true });
-    }
-
-    const dimension = DIMENSIONS[step - 1];
-
-    const formattedHistory = history.map((h: any) => ({
-      step: h.step,
-      question: h.question,
-      choice: h.choice,
-      option: h.optionLabel,
-    }));
-
+    // 🔥 SUPERCHARGED QUESTION GENERATOR PROMPT
     const prompt = `
-You are NicheRoot, an elite business decision engine.  
-Your job: generate ONE unique, personalized A/B question about THIS dimension:
+You are **NicheRoot AI**, a senior business strategist.
 
-"${dimension.label}"
+Your ONLY task is to generate the **next question** that helps diagnose the user's best business direction.
 
-────────────────────────────────
-USER STORY (USE HEAVILY)
-────────────────────────────────
-${userInput}
+----------------------------------------
+RULES
+----------------------------------------
+1. The question MUST be based on:
+   - Their personal story
+   - Their previous answers
+   - Real-world constraints
 
-────────────────────────────────
-PREVIOUS ANSWERS
-────────────────────────────────
-${JSON.stringify(formattedHistory, null, 2)}
+2. Step logic:
+   - Step 1 → Core constraint
+   - Step 2 → Personality & work style
+   - Step 3 → Risk profile
+   - Step 4 → Strengths & skills
+   - Step 5 → Market leaning (digital, local service, physical)
+   - Step 6 → Execution style (fast-start vs slow build)
 
-────────────────────────────────
-STRICT RULES
-────────────────────────────────
+3. Provide **two opposite options**:
+   - They MUST represent real trade-offs.
+   - They MUST NOT be generic.
 
-1. The question MUST be about the current dimension ONLY.
-2. It MUST feel personal and specific to the user's life.
-3. It MUST NOT repeat any previous question structure.
-4. Each option MUST represent a STRONG opposite trade-off.
-5. Each option MUST include:
+4. EACH OPTION MUST HAVE:
+   {
+     "label": "",
+     "summary": "",
+     "details": {
+       "pros": ["...", "..."],
+       "cons": ["...", "..."],
+       "example": "",
+       "whyThisFits": ""
+     }
+   }
 
-{
-  "key": "A",
-  "label": "short label",
-  "details": {
-    "description": "1–2 sentences",
-    "pros": ["pro1", "pro2"],
-    "cons": ["con1", "con2"],
-    "example": "one short real example",
-    "why_this_fits": "personalized explanation for THIS user"
-  }
-}
+5. Follow EXACT JSON structure below.
 
-6. Return ONLY this JSON:
+----------------------------------------
+RETURN JSON EXACTLY LIKE THIS:
+----------------------------------------
 
 {
   "step": ${step},
-  "question": "Your personalized question...",
-  "options": [OPTION_A_OBJECT, OPTION_B_OBJECT]
+  "question": "string",
+  "options": [
+    {
+      "key": "A",
+      "label": "string",
+      "summary": "string",
+      "details": {
+        "pros": ["string", "string"],
+        "cons": ["string", "string"],
+        "example": "string",
+        "whyThisFits": "string"
+      }
+    },
+    {
+      "key": "B",
+      "label": "string",
+      "summary": "string",
+      "details": {
+        "pros": ["string", "string"],
+        "cons": ["string", "string"],
+        "example": "string",
+        "whyThisFits": "string"
+      }
+    }
+  ]
 }
+
+----------------------------------------
+USER STORY:
+${userInput}
+
+PREVIOUS ANSWERS:
+${JSON.stringify(history, null, 2)}
+
+Generate the next question ONLY. No commentary.
 `;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.55,
-      messages: [
-        { role: "system", content: "Return valid JSON only." },
-        { role: "user", content: prompt },
-      ],
+    // Call GPT
+    const completion = await client.responses.create({
+      model: "gpt-4.1",
+      input: prompt,
     });
 
-    const raw = completion.choices[0]?.message?.content || "";
+    const raw = completion.output_text ?? "";
     const parsed = extractJson(raw);
+
+    // Validation
+    if (
+      !parsed ||
+      !parsed.options ||
+      !Array.isArray(parsed.options) ||
+      parsed.options.length !== 2
+    ) {
+      console.error("❌ Invalid question JSON:", raw);
+
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "Invalid question structure. The AI did not return proper JSON.",
+        },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({
       success: true,
-      done: false,
       question: parsed,
     });
-
   } catch (error) {
-    console.error("❌ Error generating question:", error);
+    console.error("❌ Error in /api/next-question:", error);
+
     return NextResponse.json(
-      { success: false, error: "Failed to generate next question" },
+      {
+        success: false,
+        error: "Server error generating next question.",
+      },
       { status: 500 }
     );
   }
