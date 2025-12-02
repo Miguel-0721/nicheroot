@@ -278,7 +278,7 @@ export default function Home() {
               className={`hero-illustration ${
                 illustrationLoaded ? "opacity-100" : "opacity-0"
               }`}
-              onLoadingComplete={() => setIllustrationLoaded(true)}
+              onLoad={() => setIllustrationLoaded(true)}
             />
           </div>
         </div>
