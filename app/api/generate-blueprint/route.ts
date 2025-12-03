@@ -36,7 +36,7 @@ export async function POST(req: Request) {
         ? history
             .map(
               (item) =>
-                `Step ${item.step}: "${item.question}" → Chosen: "${item.optionLabel}" (choice ${item.choice})`
+                `Step ${item.step}: "${item.question}" → Chosen: "${item.optionLabel}" (choice ${item.optionKey})`
             )
             .join("\n")
         : "No structured answers were provided, only the free-text description.";

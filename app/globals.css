@@ -32,7 +32,8 @@
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   background: var(--background) !important;
   color: var(--foreground);
   font-family: system-ui, sans-serif;
@@ -54,8 +55,13 @@ html, body {
   padding-bottom: var(--section-y);
 }
 
-.bg-white-section { background: #ffffff; }
-.bg-gray-section { background: #f7f8fa; }
+.bg-white-section {
+  background: #ffffff;
+}
+
+.bg-gray-section {
+  background: #f7f8fa;
+}
 
 /* ============================
    TYPOGRAPHY
@@ -188,9 +194,7 @@ html, body {
   bottom: -25px;
   z-index: -1;
   border-radius: 35px;
-  background: radial-gradient(circle at center,
-    rgba(150, 120, 255, 0.18),
-    transparent);
+  background: radial-gradient(circle at center, rgba(150, 120, 255, 0.18), transparent);
   filter: blur(45px);
 }
 
@@ -342,8 +346,215 @@ html, body {
   filter: brightness(1.1);
 }
 
-/* ============================
-   CLEANUP
-============================ */
-/* Old modal + overrides removed completely */
+/* ===========================================
+   START PAGE — SCOPED STYLING (UPDATED)
+=========================================== */
+.start-page {
+  min-height: 100vh;
+  padding-top: 5rem;
+  padding-bottom: 4rem;
+  background: radial-gradient(circle at top left, #eef0ff, #ffffff);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
 
+.start-container {
+  display: grid;
+  grid-template-columns: 1fr 520px; /* left text | right image */
+  align-items: center;
+  gap: 4rem;
+  padding: 2rem;
+  max-width: 1350px;
+}
+
+.start-left {
+  flex: 1;
+}
+
+.start-title {
+  font-size: 3.2rem;
+  font-weight: 800;
+  line-height: 1.15;
+}
+
+.start-title span {
+  color: var(--brand-500);
+}
+
+.start-sub {
+  font-size: 1.1rem;
+  color: #555;
+  margin: 1rem 0 2rem;
+  max-width: 520px;
+}
+
+.start-textarea {
+  width: 100%;
+  height: 180px;
+  padding: 1.2rem;
+  border-radius: 14px;
+  border: 1px solid #d0d0d8;
+  background: #fafafa;
+  font-size: 1rem;
+  resize: none;
+}
+
+.start-btn {
+  width: 100%;
+  margin-top: 1.2rem;
+  padding: 1rem;
+  border-radius: 12px;
+  border: none;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: white;
+  cursor: pointer;
+  background: linear-gradient(90deg, var(--brand-500), var(--brand-600));
+}
+
+/* NEW — no white box, no padding, no border radius */
+.start-image-card {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+/* NEW — premium shadow ONLY on image */
+.start-illustration {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0px 8px 28px rgba(0, 0, 0, 0.10));
+}
+
+/* Badge */
+.start-badge {
+  position: absolute;
+  top: 1.8rem;
+  left: 2.4rem;
+}
+
+.start-badge span {
+  background: var(--brand-500);
+  color: white;
+  padding: 0.9rem 1.3rem;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 1.3rem;
+}
+
+.start-hint {
+  font-size: 0.85rem;
+  color: #777;
+  margin-top: 0.6rem;
+}
+/* ===========================================
+   EXTRA /start PAGE POLISH (SAFE ADDITIONS)
+=========================================== */
+
+/* Give start page its own "layer" and prevent accidental scrollbars from glow */
+.start-page {
+  position: relative;
+  overflow: hidden;
+}
+
+/* Soft glow behind the flowchart image on the right */
+.start-page::before {
+  content: "";
+  position: absolute;
+  top: 12%;
+  right: 4%;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: rgba(79, 70, 229, 0.08);
+  filter: blur(95px);
+  pointer-events: none;
+}
+
+/* Ensure the right side never gets squished on big screens */
+.start-image-card {
+  max-width: 520px;
+}
+
+/* Extra smoothness for the flowchart image */
+.start-illustration {
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+
+/* ===========================================
+   HOME HERO HELPERS (SAFE ADDITIONS)
+=========================================== */
+
+/* Wrapper around the hero illustration on the home page */
+.hero-img-wrapper {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  min-width: 0;
+}
+
+/* Make sure the hero image fades in nicely when "illustrationLoaded" flips */
+.hero-illustration {
+  transition: opacity 0.35s ease;
+}
+
+/* ===========================================
+   RESPONSIVE TWEAKS (DO NOT AFFECT DESKTOP)
+=========================================== */
+
+@media (max-width: 1024px) {
+  /* Stack the start page vertically on tablet/mobile */
+  .start-container {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+
+  .start-image-card {
+    justify-content: center;
+  }
+
+  .start-title {
+    font-size: 2.6rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .start-container {
+    padding: 1.5rem;
+  }
+
+  .start-title {
+    font-size: 2.1rem;
+  }
+
+  .start-sub {
+    font-size: 0.98rem;
+  }
+
+  .start-textarea {
+    height: 150px;
+  }
+}
+/* Fix height + remove scroll */
+.start-page {
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Badge text improvement */
+.start-badge-text {
+  background: var(--brand-500);
+  color: white;
+  padding: 0.7rem 1.3rem;
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 1.05rem;
+  letter-spacing: 0.5px;
+}

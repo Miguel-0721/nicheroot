@@ -1,206 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-
-import OptionCard from "@/components/OptionCard";
-import { QuestionType, HistoryItem } from "@/types/question-types";
-
-const MAX_STEPS = 6;
+import { useState } from "react";
 
 export default function Home() {
-  // Rotating helper text
-  const placeholders = [
-    "Tell us about your background, skills, and goals...",
-    "How much time can you commit each week?",
-    "Do you prefer low risk or high income potential?",
-    "What lifestyle do you want your business to support?",
-    "Is there anything you want to avoid?",
-  ];
-
-  const [currentPlaceholder, setCurrentPlaceholder] = useState(placeholders[0]);
-
-  useEffect(() => {
-    let i = 0;
-    const interval = setInterval(() => {
-      i = (i + 1) % placeholders.length;
-      setCurrentPlaceholder(placeholders[i]);
-    }, 3000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  // FLOW STATE
   const [illustrationLoaded, setIllustrationLoaded] = useState(false);
-
-  const [step, setStep] = useState(1);
-  const [question, setQuestion] = useState<QuestionType | null>(null);
-  const [history, setHistory] = useState<HistoryItem[]>([]);
-  const [userInput, setUserInput] = useState("");
-  const [selectedChoice, setSelectedChoice] = useState<"A" | "B" | null>(null);
-
-  const [loadingBlueprint, setLoadingBlueprint] = useState(false);
-  const [loadingQuestion, setLoadingQuestion] = useState(false);
-  const [showWizard, setShowWizard] = useState(false);
-
-  const progressPercent = question
-    ? (question.step / MAX_STEPS) * 100
-    : (step / MAX_STEPS) * 100;
-
-  // 🔥 FIX: Normalize backend structure so options always exists
-  function normalizeQuestion(raw: any) {
-    if (!raw) return null;
-
-    // Already correct
-    if (Array.isArray(raw.options)) return raw;
-
-    // Convert { optionA, optionB } → options[]
-    const opts = [];
-    if (raw.optionA) opts.push(raw.optionA);
-    if (raw.optionB) opts.push(raw.optionB);
-
-    return { ...raw, options: opts };
-  }
-
-  // Load first question when wizard opens
-  useEffect(() => {
-    if (!showWizard) return;
-    if (question) return;
-
-    const fetchInitialQuestion = async () => {
-      try {
-        setLoadingQuestion(true);
-
-        const res = await fetch("/api/next-question", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            step: 1,
-            history: [],
-            userInput,
-            choice: null,
-          }),
-        });
-
-        const data = await res.json();
-
-        if (data?.success && data.question) {
-          const normalized = normalizeQuestion(data.question);
-          setQuestion(normalized);
-          setStep(normalized.step ?? 1);
-          setHistory([]);
-          setSelectedChoice(null);
-        }
-      } catch (error) {
-        console.error("Error loading initial question:", error);
-      } finally {
-        setLoadingQuestion(false);
-      }
-    };
-
-    fetchInitialQuestion();
-  }, [showWizard, question, userInput]);
-
-  // Handles Continue button logic
-  const handleContinue = async () => {
-    if (!question || !selectedChoice) return;
-    if (loadingBlueprint || loadingQuestion) return;
-
-    try {
-      setLoadingQuestion(true);
-
-      const chosenOption = question.options.find(
-        (opt) => opt.key === selectedChoice
-      );
-
-      const updatedHistory: HistoryItem[] = chosenOption
-        ? [
-            ...history,
-            {
-              step: question.step,
-              question: question.question,
-              choice: selectedChoice,
-              optionLabel: chosenOption.label,
-            },
-          ]
-        : history;
-
-      const nextStep = question.step + 1;
-
-      // FINISHED → GENERATE BLUEPRINT
-      if (nextStep > MAX_STEPS) {
-        setLoadingBlueprint(true);
-
-        const res = await fetch("/api/generate-blueprint", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userInput,
-            history: updatedHistory,
-          }),
-        });
-
-        const data = await res.json();
-
-        if (typeof window !== "undefined" && data?.blueprint) {
-          localStorage.setItem(
-            "nicheroot_blueprint",
-            JSON.stringify(data.blueprint)
-          );
-        }
-
-        setLoadingBlueprint(false);
-        setShowWizard(false);
-        window.location.href = "/blueprint";
-        return;
-      }
-
-      // OTHERWISE → FETCH NEXT QUESTION
-      const res = await fetch("/api/next-question", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          step: nextStep,
-          history: updatedHistory,
-          userInput,
-          choice: selectedChoice,
-        }),
-      });
-
-      const data = await res.json();
-
-      if (data?.success && data.question) {
-        const normalized = normalizeQuestion(data.question);
-        setHistory(updatedHistory);
-        setQuestion(normalized);
-        setStep(normalized.step ?? nextStep);
-        setSelectedChoice(null);
-      }
-    } catch (error) {
-      console.error("Error in handleContinue:", error);
-    } finally {
-      setLoadingQuestion(false);
-    }
-  };
-
-  const startFlow = () => {
-    setShowWizard(true);
-    setHistory([]);
-    setSelectedChoice(null);
-    setStep(1);
-    setQuestion(null);
-    setLoadingBlueprint(false);
-  };
-
-  const closeWizard = () => {
-    if (loadingBlueprint) return;
-    setShowWizard(false);
-    setSelectedChoice(null);
-    setQuestion(null);
-    setStep(1);
-    setHistory([]);
-  };
 
   return (
     <main className="min-h-screen bg-[var(--background)] text-gray-900">
@@ -221,7 +25,11 @@ export default function Home() {
             </a>
           </nav>
 
-          <button className="nav-btn" onClick={startFlow}>
+          {/* Redirect to /start */}
+          <button
+            className="nav-btn"
+            onClick={() => (window.location.href = "/start")}
+          >
             Start questions
           </button>
         </div>
@@ -242,11 +50,14 @@ export default function Home() {
 
             <p className="hero-sub">
               NicheRoot analyzes your time, money, strengths, goals, and
-              personality, then creates a personalized business direction.
+              personality — then generates a personalized business direction.
             </p>
 
             <div className="flex flex-wrap items-center gap-4 mt-8">
-              <button className="primary-btn" onClick={startFlow}>
+              <button
+                className="primary-btn"
+                onClick={() => (window.location.href = "/start")}
+              >
                 Start the 6 questions
               </button>
 
@@ -309,11 +120,12 @@ export default function Home() {
             <div className="card">
               <div className="icon">✔️</div>
               <h3 className="card-title">Actionable blueprint</h3>
-              <p>A niche and roadmap tailored to your real life.</p>
+              <p>Your niche, tools, and next steps tailored to your life.</p>
             </div>
           </div>
         </div>
       </section>
+
       {/* HOW SECTION */}
       <section id="how" className="section bg-white-section">
         <div className="container">
@@ -341,13 +153,13 @@ export default function Home() {
                 STEP 3
               </p>
               <h3 className="card-title">Receive your blueprint</h3>
-              <p>Your niche, tools, and next steps – tailored to your life.</p>
+              <p>Your niche, tools, and next steps — tailored to your life.</p>
             </div>
           </div>
         </div>
       </section>
 
-      {/* BLUEPRINT SECTION */}
+      {/* BLUEPRINT PREVIEW */}
       <section className="section section-blueprint bg-gray-section">
         <div className="container">
           <h2 className="section-title">What your blueprint looks like</h2>
@@ -365,7 +177,7 @@ export default function Home() {
               </ul>
 
               <p className="mt-5 text-gray-600">
-                Your blueprint adapts to your life – not vague idea lists.
+                Your blueprint adapts to your life — not random idea lists.
               </p>
             </div>
 
@@ -384,15 +196,15 @@ export default function Home() {
               <h4 className="mt-6 text-sm font-semibold">Monetization</h4>
               <ul className="mt-2 space-y-1 text-sm">
                 <li>• Monthly retainers</li>
-                <li>• Packaged mini-services</li>
+                <li>• Packaged services</li>
                 <li>• Upsell add-ons</li>
               </ul>
 
-              <h4 className="mt-6 text-sm font-semibold">First 30 days</h4>
+              <h4 className="mt-6 text-sm font-semibold">First 30 Days</h4>
               <ul className="mt-2 space-y-1 text-sm">
-                <li>• Define core offer</li>
+                <li>• Define your offer</li>
                 <li>• Validate with conversations</li>
-                <li>• Build simple landing page</li>
+                <li>• Build landing page</li>
                 <li>• Acquire first clients</li>
               </ul>
             </div>
@@ -400,35 +212,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* AI INPUT SECTION */}
-      <section className="section section-ai bg-white-section">
-        <div className="container">
-          <div className="ai-input-wrapper">
-            <h2 className="ai-input-title">Tell us about your situation</h2>
-            <p className="ai-input-sub">
-              This helps our AI understand your time, strengths, constraints,
-              and goals.
-            </p>
-
-            <p className="ai-input-hint">
-              <span className="ai-dot"></span> AI will analyze your description.
-            </p>
-
-            <textarea
-              className="ai-textarea"
-              placeholder={currentPlaceholder}
-              value={userInput}
-              onChange={(e) => setUserInput(e.target.value)}
-            />
-
-            <button className="ai-start-btn" onClick={startFlow}>
-              Start the 6 questions
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* WHO IT'S FOR SECTION */}
+      {/* WHO IT'S FOR */}
       <section id="who-its-for" className="section bg-gray-section">
         <div className="container">
           <h2 className="section-title">Who NicheRoot is for</h2>
@@ -446,12 +230,15 @@ export default function Home() {
 
             <div className="card">
               <h3 className="card-title">People who want a plan</h3>
-              <p>Your blueprint is based on real constraints.</p>
+              <p>Your blueprint adapts to your real constraints.</p>
             </div>
           </div>
 
           <div className="flex justify-center mt-10">
-            <button className="primary-btn" onClick={startFlow}>
+            <button
+              className="primary-btn"
+              onClick={() => (window.location.href = "/start")}
+            >
               Start the 6-question flow
             </button>
           </div>
@@ -463,143 +250,6 @@ export default function Home() {
         <p>NicheRoot — Smart business matching</p>
         <p>© {new Date().getFullYear()} NicheRoot. All rights reserved.</p>
       </footer>
-   {/* MODAL WIZARD */}
-<AnimatePresence>
-  {showWizard && (
-    <motion.div
-      className="fixed inset-0 bg-black/40 backdrop-blur-[2px] flex items-center justify-center z-50 px-4"
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      exit={{ opacity: 0 }}
-    >
-      <motion.div
-        className="
-          w-full max-w-4xl 
-          bg-white 
-          rounded-3xl 
-          shadow-2xl 
-          p-6 md:p-10 
-          relative 
-          max-h-[90vh] 
-          overflow-y-auto
-        "
-        initial={{ opacity: 0, scale: 0.95, y: 15 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 15 }}
-        transition={{ duration: 0.25 }}
-      >
-        {/* CLOSE BUTTON */}
-        <button
-          className={`absolute right-5 top-5 h-10 w-10 flex items-center justify-center rounded-full border border-gray-300 text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition
-            ${loadingBlueprint ? "opacity-60 cursor-not-allowed" : ""}`}
-          onClick={closeWizard}
-          disabled={loadingBlueprint}
-        >
-          ✕
-        </button>
-
-        {/* HEADER + PROGRESS */}
-        <div className="mb-10">
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-indigo-600">
-            NICHE ROOT — GUIDED DECISION FLOW
-          </p>
-
-          <h2 className="text-xl font-semibold text-gray-800 mt-2">
-            Step {question ? question.step : step} of {MAX_STEPS}
-          </h2>
-
-          <div className="mt-4 w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full bg-indigo-500"
-              animate={{ width: `${progressPercent}%` }}
-              transition={{ duration: 0.5 }}
-            />
-          </div>
-
-          <p className="text-gray-500 text-xs mt-2">
-            Your answers shape a personalized business blueprint.
-          </p>
-        </div>
-
-        {/* QUESTION CONTENT */}
-        <AnimatePresence mode="wait">
-          {!question || loadingQuestion ? (
-            <motion.div
-              key={"loading"}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="py-20 text-center text-gray-500"
-            >
-              {loadingQuestion ? "Loading question..." : "Loading…"}
-            </motion.div>
-          ) : (
-            <motion.div
-              key={step}
-              initial={{ opacity: 0, x: 35 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -35 }}
-              transition={{ duration: 0.25, ease: "easeOut" }}
-            >
-              {/* QUESTION TITLE */}
-              <h3 className="text-xl font-semibold text-gray-900 mb-3 leading-snug">
-                {question.question}
-              </h3>
-
-              <p className="text-sm text-gray-600 mb-8">
-                Choose the option that best aligns with your life and goals.
-              </p>
-
-              {/* OPTIONS */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {question.options.map((opt) => (
-                  <OptionCard
-                    key={opt.key}
-                    option={opt}
-                    selected={selectedChoice === opt.key}
-                    onSelect={() => setSelectedChoice(opt.key)}
-                  />
-                ))}
-              </div>
-
-              {/* BUTTONS */}
-              <div className="flex items-center justify-end gap-3 mt-10">
-                <button
-                  className="px-4 py-2 rounded-lg border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 transition"
-                  onClick={closeWizard}
-                  disabled={loadingBlueprint || loadingQuestion}
-                >
-                  Cancel
-                </button>
-
-                <button
-                  onClick={handleContinue}
-                  disabled={
-                    !selectedChoice || loadingBlueprint || loadingQuestion
-                  }
-                  className={`px-6 py-2 rounded-lg text-white text-sm font-medium transition
-                    ${
-                      !selectedChoice || loadingBlueprint || loadingQuestion
-                        ? "bg-indigo-300 cursor-not-allowed"
-                        : "bg-indigo-600 hover:bg-indigo-700"
-                    }`}
-                >
-                  {loadingBlueprint
-                    ? "Generating…"
-                    : loadingQuestion
-                    ? "Loading…"
-                    : "Continue"}
-                </button>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </motion.div>
-    </motion.div>
-  )}
-</AnimatePresence>
-
-
-   </main>
+    </main>
   );
 }

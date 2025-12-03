@@ -4,13 +4,13 @@ export interface OptionDetails {
   pros: string[];
   cons: string[];
   example: string;
-  whyThisFits: string;  // <-- UPDATED here (camelCase)
+  whyThisFits: string;
 }
 
 export type Option = {
   key: "A" | "B";
   label: string;
-  summary: string;      
+  summary: string;
   details: OptionDetails;
 };
 
@@ -20,9 +20,10 @@ export interface QuestionType {
   options: Option[];
 }
 
+// Used for blueprint generation + question flow history
 export interface HistoryItem {
   step: number;
   question: string;
-  choice: "A" | "B";
+  optionKey: "A" | "B";   // <-- canonical name used everywhere
   optionLabel: string;
 }

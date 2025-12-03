@@ -18,27 +18,20 @@ export const metadata: Metadata = {
     "NicheRoot analyzes your time, money, strengths, goals, and personality to generate your perfect business blueprint.",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
       <body
         className={`
-          ${geistSans.variable} 
-          ${geistMono.variable} 
-          antialiased 
-          bg-[var(--background)] 
+          ${geistSans.variable}
+          ${geistMono.variable}
+          antialiased
+          bg-[var(--background)]
           text-[var(--foreground)]
         `}
         suppressHydrationWarning
       >
-        {/* Main content wrapper */}
-        <main className="min-h-screen w-full">
-          {children}
-        </main>
+        {children}
       </body>
     </html>
   );
