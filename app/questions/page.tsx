@@ -1,10 +1,21 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import OptionCard from "@/components/OptionCard";
 import { QuestionType, HistoryItem } from "@/types/question-types";
+
+const MAX_STEPS = 6;
+
+const PHASE_LABELS = [
+  "Your constraints",
+  "Work style",
+  "Risk profile",
+  "Skills & strengths",
+  "Market leaning",
+  "Execution style",
+];
 
 export default function QuestionsPage() {
   const router = useRouter();
@@ -17,12 +28,9 @@ export default function QuestionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [userInput, setUserInput] = useState("");
 
-  /* --------------------------------------------------------
-     LOAD USER INPUT SAFELY (prevents redirect loop)
-  -------------------------------------------------------- */
+  // Load intro from localStorage
   useEffect(() => {
     if (typeof window === "undefined") return;
-
     const saved = localStorage.getItem("nicheroot_userInput");
 
     if (!saved || saved.trim() === "") {
@@ -31,11 +39,9 @@ export default function QuestionsPage() {
     }
 
     setUserInput(saved);
-  }, []);
+  }, [router]);
 
-  /* --------------------------------------------------------
-     FETCH FIRST QUESTION (after userInput is ready)
-  -------------------------------------------------------- */
+  // First auto question load
   useEffect(() => {
     if (!userInput) return;
     fetchQuestion(null);
@@ -63,80 +69,184 @@ export default function QuestionsPage() {
       setQuestion(data.question);
       setLoading(false);
     } catch (err: any) {
-      setError(err.message || "Something went wrong.");
+      console.error("Error fetching question:", err);
+      setError(err.message || "Failed to load next question.");
       setLoading(false);
     }
   }
 
-  /* --------------------------------------------------------
-     HANDLE OPTION SELECTION
-  -------------------------------------------------------- */
   function handleSelect(key: "A" | "B") {
     setSelected(key);
   }
 
-  /* --------------------------------------------------------
-     NEXT STEP (history now uses optionKey)
-  -------------------------------------------------------- */
+  // -------------------------------
+  // FULLY FIXED goNext()
+  // -------------------------------
   async function goNext() {
-    if (!selected) return;
+    if (!selected || !question) return;
 
-    const chosen = question!.options.find((o) => o.key === selected);
+    const chosen = question.options.find((o) => o.key === selected);
     if (!chosen) return;
 
     const newHistory: HistoryItem[] = [
       ...history,
       {
         step,
-        question: question!.question,
-        optionKey: selected,      // <-- FIXED NAME
+        question: question.question,
+        choice: selected,
         optionLabel: chosen.label,
       },
     ];
 
     setHistory(newHistory);
 
-    // Final step -> go to blueprint
-    if (step >= 6) {
-      if (typeof window !== "undefined") {
-        localStorage.setItem("nicheroot_history", JSON.stringify(newHistory));
+    // 1) If final step → generate blueprint
+    if (step >= MAX_STEPS) {
+      try {
+        setLoading(true);
+
+        const res = await fetch("/api/generate-blueprint", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            userInput,
+            history: newHistory,
+          }),
+        });
+
+        const data = await res.json();
+
+        if (data.error) {
+          console.error("Blueprint generation failed:", data.error);
+          setError(data.error);
+          setLoading(false);
+          return;
+        }
+
+        // 100% correct way to encode for URL
+        const encoded = encodeURIComponent(JSON.stringify(data));
+
+        router.push(`/blueprint?data=${encoded}`);
+        return;
+      } catch (err: any) {
+        console.error("AI Blueprint error:", err);
+        setError("Failed to generate blueprint. Try again.");
+        setLoading(false);
+        return;
       }
-      router.push("/blueprint");
-      return;
     }
 
-    setStep(step + 1);
+    // 2) Otherwise → continue asking questions
+    const nextStep = step + 1;
+    setStep(nextStep);
     setSelected(null);
 
     await fetchQuestion(selected);
   }
 
+  const progress = (step / MAX_STEPS) * 100;
+  const activePhaseIndex = Math.min(step - 1, PHASE_LABELS.length - 1);
+
   return (
-    <main className="min-h-screen bg-[var(--background)] flex justify-center items-start pt-28 pb-20 px-6">
-      <div className="max-w-3xl w-full">
+    <main className="min-h-screen bg-[var(--background)] text-gray-900">
+      <div className="mx-auto max-w-5xl px-4 pb-24 pt-24 sm:pt-28">
+        
+        {/* Header */}
+        <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div>
+            <div className="mb-2 inline-flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--brand-500)]">
+              <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[var(--brand-500)] text-[9px] font-bold text-white">
+                N
+              </span>
+              NicheRoot Decision Flow
+            </div>
 
-        <h1 className="text-3xl font-bold mb-2">
-          Step {step} <span className="text-[var(--brand-500)]">/ 6</span>
-        </h1>
+            <h1 className="text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">
+              Question {step}{" "}
+              <span className="text-[var(--brand-500)]">/ {MAX_STEPS}</span>
+            </h1>
 
+            <p className="mt-2 max-w-xl text-sm text-gray-600">
+              Smart trade-off questions that match your goals to one strong business direction.
+            </p>
+          </div>
+
+          {/* Progress Bar */}
+          <div className="rounded-2xl bg-white/90 px-4 py-3 text-xs shadow-sm ring-1 ring-black/5 sm:min-w-[220px]">
+            <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-gray-500">
+              Progress toward your personalized blueprint
+            </div>
+            <div className="h-1.5 w-full overflow-hidden rounded-full bg-gray-100">
+              <div
+                className="h-full rounded-full bg-[var(--brand-500)] transition-all"
+                style={{ width: `${progress}%` }}
+              />
+            </div>
+            <div className="mt-1 text-[11px] text-gray-500">
+              {Math.round(progress)}% complete
+            </div>
+          </div>
+        </div>
+
+        {/* Phase mini-nav */}
+        <div className="mb-6 flex flex-wrap gap-2 text-[11px] font-medium text-gray-500">
+          {PHASE_LABELS.map((label, idx) => {
+            const active = idx === activePhaseIndex;
+            return (
+              <div
+                key={label}
+                className={`inline-flex items-center gap-1 rounded-full border px-3 py-1 transition ${
+                  active
+                    ? "border-[var(--brand-500)] bg-indigo-50 text-[var(--brand-500)]"
+                    : "border-transparent text-gray-500"
+                }`}
+              >
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    active ? "bg-[var(--brand-500)]" : "bg-gray-300"
+                  }`}
+                />
+                {label}
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Main Question Area */}
         {loading ? (
-          <p className="mt-10 text-gray-500 text-lg">Loading question…</p>
+          <p className="mt-16 text-center text-sm text-gray-500">
+            Loading your next question…
+          </p>
         ) : error ? (
-          <p className="mt-10 text-red-500">{error}</p>
+          <div className="mt-10 rounded-2xl bg-red-50 p-4 text-sm text-red-700">
+            {error}
+          </div>
         ) : (
           <AnimatePresence mode="wait">
-            <motion.div
+            <motion.section
               key={question?.question}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.25 }}
-              className="mt-6"
+              className="rounded-3xl bg-white/90 p-5 shadow-lg ring-1 ring-black/5 sm:p-7"
             >
-              <h2 className="text-xl font-semibold mb-6">
-                {question?.question}
-              </h2>
+              {/* Question */}
+              <div className="mb-6">
+                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--brand-500)]">
+                  Current phase: {PHASE_LABELS[activePhaseIndex]}
+                </p>
 
+                <h2 className="mt-2 text-lg font-semibold text-gray-900 sm:text-xl">
+                  {question?.question}
+                </h2>
+
+                <p className="mt-2 text-xs text-gray-500">
+                  Each answer narrows down a single strong business direction.
+                </p>
+              </div>
+
+              {/* Options */}
               <div className="space-y-4">
                 {question?.options.map((opt) => (
                   <OptionCard
@@ -148,18 +258,21 @@ export default function QuestionsPage() {
                 ))}
               </div>
 
-              <button
-                onClick={goNext}
-                disabled={!selected}
-                className={`mt-6 w-full py-3 rounded-xl text-white font-semibold transition ${
-                  selected
-                    ? "bg-[var(--brand-500)] hover:bg-[var(--brand-600)]"
-                    : "bg-gray-300 cursor-not-allowed"
-                }`}
-              >
-                Continue →
-              </button>
-            </motion.div>
+              {/* Continue Button */}
+              <div className="mt-6">
+                <button
+                  onClick={goNext}
+                  disabled={!selected}
+                  className={`w-full rounded-full px-8 py-3 text-sm font-semibold shadow-md transition-all ${
+                    !selected
+                      ? "cursor-not-allowed bg-gray-300 text-gray-100 opacity-80 shadow-none"
+                      : "bg-[var(--brand-500)] text-white hover:bg-[var(--brand-400)] hover:shadow-[0_18px_45px_rgba(88,80,236,0.25)] active:scale-[0.98]"
+                  }`}
+                >
+                  Continue →
+                </button>
+              </div>
+            </motion.section>
           </AnimatePresence>
         )}
       </div>

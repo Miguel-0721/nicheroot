@@ -1,5 +1,3 @@
-// /types/question-types.ts
-
 export interface OptionDetails {
   pros: string[];
   cons: string[];
@@ -20,10 +18,9 @@ export interface QuestionType {
   options: Option[];
 }
 
-// Used for blueprint generation + question flow history
 export interface HistoryItem {
   step: number;
   question: string;
-  optionKey: "A" | "B";   // <-- canonical name used everywhere
+  choice: "A" | "B";
   optionLabel: string;
 }
