@@ -1,5 +1,3 @@
-// app/api/generate-blueprint/route.ts
-
 import { NextResponse } from "next/server";
 import OpenAI from "openai";
 import type { BusinessBlueprint } from "@/types/blueprint-types";
@@ -19,12 +17,10 @@ function extractFirstJson(text: string): any {
 
 // Handle different possible shapes from the Responses API
 function safeGetText(response: any): string {
-  // New unified format
   if (response.output_text) {
     return response.output_text;
   }
 
-  // responses.create with "output" array
   if (response.output?.length > 0) {
     const first = response.output[0];
     if (first.content?.length > 0 && first.content[0].text) {
@@ -32,7 +28,6 @@ function safeGetText(response: any): string {
     }
   }
 
-  // ChatCompletion-like
   if (response.choices?.length > 0) {
     const msg = response.choices[0].message;
     if (msg?.content) return msg.content;
@@ -155,19 +150,7 @@ IMPORTANT RULES:
 - Return ONLY raw JSON. No markdown, no comments, no backticks, no extra text.
 - All string fields must be plain text without markdown.
 - Every "nextMoves" array must contain 3–7 short, concrete, actionable steps tailored to THAT SECTION ONLY.
-  - executiveSummary.nextMoves → high-level validation & direction decisions.
-  - founderFit.nextMoves → adjust time, capital, risk, and skill focus.
-  - businessModel.nextMoves → refine offers, delivery, and value chain.
-  - marketAnalysis.nextMoves → demand validation, segment research.
-  - competition.nextMoves → positioning and differentiation actions.
-  - targetAudience.nextMoves → audience research, interviews, messaging tests.
-  - valueProposition.nextMoves → refine pains/gains mapping and proof.
-  - monetization.nextMoves → pricing tests, packages, recurring models.
-  - financials.nextMoves → check assumptions, buffers, revenue milestones.
-  - actionPlan.nextMoves → what to do FIRST in the execution roadmap.
-  - risks.nextMoves → mitigation, monitoring, contingency actions.
-  - tools.nextMoves → which tools to set up in what order.
-- "checklist" is a global list of 10–20 steps you consider the minimal path from zero to first stable revenue.
+- "checklist" is a global list of 10–20 steps from zero to first stable revenue.
 - financials.projection MUST have 12 months: "Month 1" ... "Month 12".
 - demandTrend MUST be realistic and monotonic or slightly noisy, not random.
 
@@ -198,6 +181,7 @@ Using this information, generate a complete BusinessBlueprint JSON object that f
 
     const parsed = extractFirstJson(raw) as BusinessBlueprint;
 
+    // Return ONLY the blueprint object
     return NextResponse.json(parsed);
   } catch (err: any) {
     console.error("Blueprint generation error:", err);

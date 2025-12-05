@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import OptionCard from "@/components/OptionCard";
 import { QuestionType, HistoryItem } from "@/types/question-types";
+import type { BusinessBlueprint } from "@/types/blueprint-types";
 
 const MAX_STEPS = 6;
 
@@ -17,6 +18,25 @@ const PHASE_LABELS = [
   "Execution style",
 ];
 
+const STORAGE_KEY = "nicheroot_blueprints_v2";
+
+type SavedBlueprint = {
+  id: string;
+  createdAt: string;
+  label: string;
+  data: BusinessBlueprint;
+};
+
+function createLabel(data: BusinessBlueprint, createdAtISO: string): string {
+  const raw = data.executiveSummary.model.trim();
+  const date = new Date(createdAtISO).toLocaleString(undefined, {
+    dateStyle: "short",
+    timeStyle: "short",
+  });
+  if (!raw) return `Blueprint · ${date}`;
+  return raw.length > 70 ? raw.slice(0, 70) + "… · " + date : raw + " · " + date;
+}
+
 export default function QuestionsPage() {
   const router = useRouter();
 
@@ -28,33 +48,31 @@ export default function QuestionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [userInput, setUserInput] = useState("");
 
-  /* ---------------------------------------------
-     LOAD INTRO FROM LOCALSTORAGE
-  --------------------------------------------- */
+  // -------------------------------
+  // LOAD INTRO FROM localStorage
+  // -------------------------------
   useEffect(() => {
     if (typeof window === "undefined") return;
-
     const saved = localStorage.getItem("nicheroot_userInput");
 
     if (!saved || saved.trim() === "") {
-      setTimeout(() => router.push("/start"), 50);
+      // No intro → send back to /start
+      router.push("/start");
       return;
     }
 
     setUserInput(saved);
   }, [router]);
 
-  /* ---------------------------------------------
-     INITIAL QUESTION LOAD
-  --------------------------------------------- */
+  // -------------------------------
+  // FIRST AUTO QUESTION LOAD
+  // -------------------------------
   useEffect(() => {
     if (!userInput) return;
     fetchQuestion(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userInput]);
 
-  /* ---------------------------------------------
-     FETCH QUESTION
-  --------------------------------------------- */
   async function fetchQuestion(choice: "A" | "B" | null) {
     try {
       setLoading(true);
@@ -71,8 +89,16 @@ export default function QuestionsPage() {
         }),
       });
 
+      if (!res.ok) {
+        const t = await res.text();
+        throw new Error(t || "Failed to load next question.");
+      }
+
       const data = await res.json();
-      if (!data.success) throw new Error(data.error);
+
+      if (!data.success || !data.question) {
+        throw new Error(data.error || "No question returned.");
+      }
 
       setQuestion(data.question);
       setLoading(false);
@@ -87,9 +113,9 @@ export default function QuestionsPage() {
     setSelected(key);
   }
 
-  /* ---------------------------------------------
-     goNext() — FINAL FIXED VERSION
-  --------------------------------------------- */
+  // -------------------------------
+  // FINAL + NEXT LOGIC
+  // -------------------------------
   async function goNext() {
     if (!selected || !question) return;
 
@@ -108,10 +134,11 @@ export default function QuestionsPage() {
 
     setHistory(newHistory);
 
-    // ====== FINAL STEP → GENERATE BLUEPRINT ======
+    // ========== FINAL STEP → GENERATE BLUEPRINT ==========
     if (step >= MAX_STEPS) {
       try {
         setLoading(true);
+        setError(null);
 
         const res = await fetch("/api/generate-blueprint", {
           method: "POST",
@@ -122,35 +149,51 @@ export default function QuestionsPage() {
           }),
         });
 
-        const data = await res.json();
-
-        if (data.error) {
-          console.error("Blueprint generation failed:", data.error);
-          setError(data.error);
-          setLoading(false);
-          return;
+        if (!res.ok) {
+          const t = await res.text();
+          throw new Error(t || "Failed to generate blueprint.");
         }
 
-        // 🔥 FIX → API returns the blueprint directly
-        const blueprint = data;
+        const blueprint: BusinessBlueprint = await res.json();
 
-        if (!blueprint || typeof blueprint !== "object") {
-          throw new Error("Invalid blueprint data received from API.");
+        // Save to localStorage with a short ID → avoid huge URL
+        let id = Date.now().toString();
+        if (typeof window !== "undefined") {
+          try {
+            let exist: SavedBlueprint[] = [];
+            const raw = localStorage.getItem(STORAGE_KEY);
+            if (raw) exist = JSON.parse(raw);
+
+            const createdAt = new Date().toISOString();
+            const label = createLabel(blueprint, createdAt);
+
+            const updated: SavedBlueprint[] = [
+              ...exist,
+              { id, createdAt, label, data: blueprint },
+            ];
+
+            const trimmed = updated.slice(-8); // keep last 8
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+
+            // if id changed by some logic in future we still keep var
+            id = trimmed[trimmed.length - 1].id;
+          } catch (e) {
+            console.error("Failed to save blueprint to localStorage:", e);
+          }
         }
 
-        const encoded = encodeURIComponent(JSON.stringify(blueprint));
-
-        router.push(`/blueprint?data=${encoded}`);
+        // Redirect with small query param → no more 431
+        router.push(`/blueprint?id=${id}`);
         return;
       } catch (err: any) {
         console.error("AI Blueprint error:", err);
-        setError("Failed to generate blueprint. Try again.");
+        setError(err.message || "Failed to generate blueprint. Try again.");
         setLoading(false);
         return;
       }
     }
 
-    // ====== NEXT QUESTION ======
+    // ========== OTHERWISE → CONTINUE QUESTIONS ==========
     const nextStep = step + 1;
     setStep(nextStep);
     setSelected(null);
@@ -158,15 +201,9 @@ export default function QuestionsPage() {
     await fetchQuestion(selected);
   }
 
-  /* ---------------------------------------------
-     PROGRESS UI
-  --------------------------------------------- */
   const progress = (step / MAX_STEPS) * 100;
   const activePhaseIndex = Math.min(step - 1, PHASE_LABELS.length - 1);
 
-  /* ---------------------------------------------
-     RENDER UI
-  --------------------------------------------- */
   return (
     <main className="min-h-screen bg-[var(--background)] text-gray-900">
       <div className="mx-auto max-w-5xl px-4 pb-24 pt-24 sm:pt-28">
@@ -181,11 +218,13 @@ export default function QuestionsPage() {
             </div>
 
             <h1 className="text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">
-              Question {step} <span className="text-[var(--brand-500)]">/ {MAX_STEPS}</span>
+              Question {step}{" "}
+              <span className="text-[var(--brand-500)]">/ {MAX_STEPS}</span>
             </h1>
 
             <p className="mt-2 max-w-xl text-sm text-gray-600">
-              Smart trade-off questions that match your goals to one strong business direction.
+              Smart trade-off questions that match your goals to one strong
+              business direction.
             </p>
           </div>
 
@@ -200,11 +239,13 @@ export default function QuestionsPage() {
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <div className="mt-1 text-[11px] text-gray-500">{Math.round(progress)}% complete</div>
+            <div className="mt-1 text-[11px] text-gray-500">
+              {Math.round(progress)}% complete
+            </div>
           </div>
         </div>
 
-        {/* Phase Indicators */}
+        {/* Phase mini-nav */}
         <div className="mb-6 flex flex-wrap gap-2 text-[11px] font-medium text-gray-500">
           {PHASE_LABELS.map((label, idx) => {
             const active = idx === activePhaseIndex;
@@ -228,11 +269,15 @@ export default function QuestionsPage() {
           })}
         </div>
 
-        {/* Main Question */}
+        {/* Main Question Area */}
         {loading ? (
-          <p className="mt-16 text-center text-sm text-gray-500">Loading your next question…</p>
+          <p className="mt-16 text-center text-sm text-gray-500">
+            Loading your next question…
+          </p>
         ) : error ? (
-          <div className="mt-10 rounded-2xl bg-red-50 p-4 text-sm text-red-700">{error}</div>
+          <div className="mt-10 rounded-2xl bg-red-50 p-4 text-sm text-red-700">
+            {error}
+          </div>
         ) : (
           <AnimatePresence mode="wait">
             <motion.section
