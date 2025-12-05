@@ -28,9 +28,12 @@ export default function QuestionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [userInput, setUserInput] = useState("");
 
-  // Load intro from localStorage
+  /* ---------------------------------------------
+     LOAD INTRO FROM LOCALSTORAGE
+  --------------------------------------------- */
   useEffect(() => {
     if (typeof window === "undefined") return;
+
     const saved = localStorage.getItem("nicheroot_userInput");
 
     if (!saved || saved.trim() === "") {
@@ -41,12 +44,17 @@ export default function QuestionsPage() {
     setUserInput(saved);
   }, [router]);
 
-  // First auto question load
+  /* ---------------------------------------------
+     INITIAL QUESTION LOAD
+  --------------------------------------------- */
   useEffect(() => {
     if (!userInput) return;
     fetchQuestion(null);
   }, [userInput]);
 
+  /* ---------------------------------------------
+     FETCH QUESTION
+  --------------------------------------------- */
   async function fetchQuestion(choice: "A" | "B" | null) {
     try {
       setLoading(true);
@@ -79,9 +87,9 @@ export default function QuestionsPage() {
     setSelected(key);
   }
 
-  // -------------------------------
-  // FULLY FIXED goNext()
-  // -------------------------------
+  /* ---------------------------------------------
+     goNext() — FINAL FIXED VERSION
+  --------------------------------------------- */
   async function goNext() {
     if (!selected || !question) return;
 
@@ -100,7 +108,7 @@ export default function QuestionsPage() {
 
     setHistory(newHistory);
 
-    // 1) If final step → generate blueprint
+    // ====== FINAL STEP → GENERATE BLUEPRINT ======
     if (step >= MAX_STEPS) {
       try {
         setLoading(true);
@@ -123,8 +131,14 @@ export default function QuestionsPage() {
           return;
         }
 
-        // 100% correct way to encode for URL
-        const encoded = encodeURIComponent(JSON.stringify(data));
+        // 🔥 FIX → API returns the blueprint directly
+        const blueprint = data;
+
+        if (!blueprint || typeof blueprint !== "object") {
+          throw new Error("Invalid blueprint data received from API.");
+        }
+
+        const encoded = encodeURIComponent(JSON.stringify(blueprint));
 
         router.push(`/blueprint?data=${encoded}`);
         return;
@@ -136,7 +150,7 @@ export default function QuestionsPage() {
       }
     }
 
-    // 2) Otherwise → continue asking questions
+    // ====== NEXT QUESTION ======
     const nextStep = step + 1;
     setStep(nextStep);
     setSelected(null);
@@ -144,13 +158,18 @@ export default function QuestionsPage() {
     await fetchQuestion(selected);
   }
 
+  /* ---------------------------------------------
+     PROGRESS UI
+  --------------------------------------------- */
   const progress = (step / MAX_STEPS) * 100;
   const activePhaseIndex = Math.min(step - 1, PHASE_LABELS.length - 1);
 
+  /* ---------------------------------------------
+     RENDER UI
+  --------------------------------------------- */
   return (
     <main className="min-h-screen bg-[var(--background)] text-gray-900">
       <div className="mx-auto max-w-5xl px-4 pb-24 pt-24 sm:pt-28">
-        
         {/* Header */}
         <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div>
@@ -162,8 +181,7 @@ export default function QuestionsPage() {
             </div>
 
             <h1 className="text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">
-              Question {step}{" "}
-              <span className="text-[var(--brand-500)]">/ {MAX_STEPS}</span>
+              Question {step} <span className="text-[var(--brand-500)]">/ {MAX_STEPS}</span>
             </h1>
 
             <p className="mt-2 max-w-xl text-sm text-gray-600">
@@ -182,13 +200,11 @@ export default function QuestionsPage() {
                 style={{ width: `${progress}%` }}
               />
             </div>
-            <div className="mt-1 text-[11px] text-gray-500">
-              {Math.round(progress)}% complete
-            </div>
+            <div className="mt-1 text-[11px] text-gray-500">{Math.round(progress)}% complete</div>
           </div>
         </div>
 
-        {/* Phase mini-nav */}
+        {/* Phase Indicators */}
         <div className="mb-6 flex flex-wrap gap-2 text-[11px] font-medium text-gray-500">
           {PHASE_LABELS.map((label, idx) => {
             const active = idx === activePhaseIndex;
@@ -212,15 +228,11 @@ export default function QuestionsPage() {
           })}
         </div>
 
-        {/* Main Question Area */}
+        {/* Main Question */}
         {loading ? (
-          <p className="mt-16 text-center text-sm text-gray-500">
-            Loading your next question…
-          </p>
+          <p className="mt-16 text-center text-sm text-gray-500">Loading your next question…</p>
         ) : error ? (
-          <div className="mt-10 rounded-2xl bg-red-50 p-4 text-sm text-red-700">
-            {error}
-          </div>
+          <div className="mt-10 rounded-2xl bg-red-50 p-4 text-sm text-red-700">{error}</div>
         ) : (
           <AnimatePresence mode="wait">
             <motion.section
