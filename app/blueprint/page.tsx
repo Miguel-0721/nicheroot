@@ -612,117 +612,151 @@ function SectionContentRenderer({ content }: { content: SectionContent }) {
   );
 }
 
-/* ---------- CHART RENDERER ---------- */
-
+/* ---------- CHART RENDERER (FINAL FIXED VERSION) ---------- */
 function ChartBlockRenderer({ chart }: { chart: ChartBlock }) {
-  const { title, type, data, xKey, yKeys, note } = chart;
+  const { title, type, data = [], xKey, yKeys, note } = chart;
 
-  // Fallbacks
-  const safeXKey = xKey || (type === "pie" ? undefined : "label");
-  const safeYKeys = yKeys && yKeys.length > 0 ? yKeys : ["value"];
+  // Try to infer keys from the first row if user didn't supply xKey/yKeys
+  const firstRow = data && data.length > 0 ? data[0] : undefined;
+
+  const safeXKey =
+    xKey ||
+    (type === "pie"
+      ? undefined
+      : firstRow
+      ? Object.keys(firstRow)[0]
+      : undefined);
+
+  const safeYKeys =
+    yKeys && yKeys.length > 0
+      ? yKeys
+      : firstRow
+      ? Object.keys(firstRow).filter(
+          (k) => typeof (firstRow as any)[k] === "number"
+        )
+      : [];
+
+  // If no data or no keys → Show friendly message
+  if (!data || data.length === 0 || (!safeXKey && type !== "pie") || safeYKeys.length === 0) {
+    return (
+      <div className="rounded-xl bg-gray-50 p-4 ring-1 ring-gray-200 text-[12px] text-gray-500">
+        {title && (
+          <p className="mb-2 text-[12px] font-semibold uppercase text-gray-600">
+            {title}
+          </p>
+        )}
+        No visual data available for this chart.
+      </div>
+    );
+  }
+
+  // Prevent 0x0 container (this was breaking your other charts)
+  const containerStyle = {
+    minHeight: 260,
+    width: "100%",
+  };
+
+  const palette = ["#6366F1", "#10B981", "#F97316", "#EC4899"];
 
   return (
-    <div className="flex h-64 flex-col rounded-xl bg-gray-50 p-4 ring-1 ring-gray-200">
+    <div className="flex flex-col rounded-xl bg-gray-50 p-4 ring-1 ring-gray-200">
       {title && (
         <p className="mb-2 text-[12px] font-semibold uppercase text-gray-600">
           {title}
         </p>
       )}
-      <div className="flex-1">
-        {type === "line" && safeXKey ? (
-          <ResponsiveContainer>
+
+      <div style={containerStyle}>
+        <ResponsiveContainer width="100%" height="100%">
+          {type === "line" ? (
             <LineChart data={data}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey={safeXKey} />
               <YAxis />
               <Tooltip />
-              {safeYKeys.map((key, idx) => (
+              {safeYKeys.map((key, i) => (
                 <Line
                   key={key}
                   type="monotone"
                   dataKey={key}
-                  stroke={idx === 0 ? "#6366F1" : "#10B981"}
+                  stroke={palette[i % palette.length]}
                   strokeWidth={2}
                   dot={false}
                 />
               ))}
             </LineChart>
-          </ResponsiveContainer>
-        ) : type === "bar" && safeXKey ? (
-          <ResponsiveContainer>
+          ) : type === "bar" ? (
             <BarChart data={data}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey={safeXKey} />
               <YAxis />
               <Tooltip />
-              {safeYKeys.map((key, idx) => (
+              {safeYKeys.map((key, i) => (
                 <Bar
                   key={key}
                   dataKey={key}
-                  fill={idx === 0 ? "#6366F1" : "#10B981"}
+                  fill={palette[i % palette.length]}
                   radius={[4, 4, 0, 0]}
                 />
               ))}
             </BarChart>
-          </ResponsiveContainer>
-        ) : type === "pie" ? (
-          <ResponsiveContainer>
+          ) : type === "pie" ? (
             <PieChart>
               <Pie
                 data={data}
                 dataKey={safeYKeys[0]}
-                nameKey={safeXKey || "name"}
-                fill="#6366F1"
+                nameKey={safeXKey || "label"}
+                fill={palette[0]}
                 label
               />
             </PieChart>
-          </ResponsiveContainer>
-        ) : type === "radar" && safeXKey && safeYKeys.length > 0 ? (
-          <ResponsiveContainer>
+          ) : type === "radar" ? (
             <RadarChart data={data}>
               <PolarGrid />
               <PolarAngleAxis dataKey={safeXKey} />
               <PolarRadiusAxis angle={30} domain={[0, 100]} />
               <Radar
                 dataKey={safeYKeys[0]}
-                stroke="#6366F1"
-                fill="#6366F1"
-                fillOpacity={0.3}
+                fill={palette[0]}
+                stroke={palette[0]}
+                fillOpacity={0.4}
               />
             </RadarChart>
-          </ResponsiveContainer>
-        ) : type === "funnel" && safeXKey && safeYKeys.length > 0 ? (
-          // Simple funnel-style bar chart
-          <ResponsiveContainer>
+          ) : type === "funnel" ? (
             <BarChart data={data} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis type="number" />
-              <YAxis type="category" dataKey={safeXKey} />
+              <YAxis dataKey={safeXKey} type="category" />
               <Tooltip />
-              <Bar dataKey={safeYKeys[0]} fill="#6366F1" radius={[0, 4, 4, 0]} />
+              <Bar dataKey={safeYKeys[0]} fill={palette[0]} />
             </BarChart>
-          </ResponsiveContainer>
-        ) : type === "heatmap" && safeXKey && safeYKeys.length > 0 ? (
-          // Simple bar-based heat proxy
-          <ResponsiveContainer>
+          ) : type === "heatmap" ? (
             <BarChart data={data}>
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey={safeXKey} />
               <YAxis />
               <Tooltip />
-              <Bar dataKey={safeYKeys[0]} fill="#6366F1" radius={[4, 4, 0, 0]} />
+              <Bar
+                dataKey={safeYKeys[0]}
+                fill={palette[0]}
+                radius={[4, 4, 0, 0]}
+              />
             </BarChart>
-          </ResponsiveContainer>
-        ) : (
-          <p className="text-[12px] text-gray-500">
-            Chart configuration not recognised.
-          </p>
-        )}
+          ) : (
+            // FINAL fallback
+            <BarChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey={safeXKey} />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey={safeYKeys[0]} fill={palette[0]} />
+            </BarChart>
+          )}
+        </ResponsiveContainer>
       </div>
+
       {note && (
-        <p className="mt-2 text-[11px] text-gray-500">
-          {note}
-        </p>
+        <p className="mt-2 text-[11px] text-gray-500">{note}</p>
       )}
     </div>
   );
