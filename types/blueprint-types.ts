@@ -1,155 +1,202 @@
 // types/blueprint-types.ts
 
+/**
+ * High-level scoring metrics for the whole blueprint.
+ * These are shown in the header / summary area.
+ */
+export type BlueprintScoreMetrics = {
+  risk: number;         // 0–100
+  skillFit: number;     // 0–100
+  demand: number;       // 0–100
+  monetization: number; // 0–100
+};
+
+/**
+ * Meta information about the blueprint: short labels used
+ * in the hero/header area and for quick filters later.
+ */
+export type BlueprintMeta = {
+  /** Short name of the business model, e.g. "Niche course + community" */
+  modelName: string;
+
+  /** Simple label, e.g. "Simple", "Moderate", "Complex" */
+  difficulty: string;
+
+  /** Startup cost label, e.g. "Very low", "Low", "Medium", "High" */
+  startupCost: string;
+
+  /** Expected time to first meaningful results, e.g. "4–8 weeks" */
+  expectedTimeline: string;
+
+  /** Key scores summarising risk, fit, demand and monetization strength. */
+  scores: BlueprintScoreMetrics;
+};
+
+/**
+ * Supported chart types for visualising data in sections.
+ * You can map these to Recharts components in the UI.
+ */
+export type ChartType =
+  | "line"
+  | "bar"
+  | "pie"
+  | "radar"
+  | "heatmap"
+  | "funnel";
+
+/**
+ * Generic chart block.
+ * - `data` is intentionally flexible so different chart types can shape it.
+ * - `xKey` and `yKeys` help the UI know which fields to plot.
+ */
+export type ChartBlock = {
+  title?: string;
+  type: ChartType;
+  /** Name of the key used for the X axis (e.g. "month", "year", "stage"). */
+  xKey?: string;
+  /** Keys used for Y values (e.g. ["revenue", "expenses"]). */
+  yKeys?: string[];
+  /** Raw data array; structure depends on chart type and keys. */
+  data: any[];
+  /** Optional explanatory text shown near the chart. */
+  note?: string;
+};
+
+/**
+ * Diagram types describe conceptual flows rather than numeric charts.
+ * You can later map these into custom React components (flow, canvas, etc.).
+ */
+export type DiagramType =
+  | "flow"
+  | "value-chain"
+  | "customer-journey"
+  | "canvas"
+  | "funnel";
+
+/**
+ * Structured diagram block.
+ * - `nodes` are labels.
+ * - `connections` are pairs of node indices [from, to].
+ */
+export type DiagramBlock = {
+  title?: string;
+  type: DiagramType;
+  nodes: string[];
+  connections: [number, number][];
+  /** Optional notes to guide interpretation of the diagram. */
+  notes?: string[];
+};
+
+/**
+ * Simple image / illustration reference.
+ * - `url` can be internal ("/images/...") or external.
+ */
+export type ImageBlock = {
+  title?: string;
+  url: string;
+  caption?: string;
+};
+
+/**
+ * A simple titled list of bullet items.
+ */
+export type ListBlock = {
+  title?: string;
+  items: string[];
+};
+
+/**
+ * Table with column labels and string cell values.
+ * You can keep it generic and let the UI decide how to render each cell.
+ */
+export type TableBlock = {
+  title?: string;
+  columns: string[];
+  rows: string[][];
+};
+
+/**
+ * Group of examples under a small heading.
+ * Useful for "sample offers", "sample niches", etc.
+ */
+export type ExampleBlock = {
+  title?: string;
+  items: string[];
+};
+
+/**
+ * The core content payload for a single blueprint section.
+ * Each section may use only some of these blocks.
+ */
+export type SectionContent = {
+  /** 1–N paragraphs of explanatory text. */
+  paragraphs?: string[];
+
+  /** 0–N bullet lists with optional headings. */
+  lists?: ListBlock[];
+
+  /** 0–N tables for structured comparisons / frameworks. */
+  tables?: TableBlock[];
+
+  /** 0–N charts for numeric or time-series data. */
+  charts?: ChartBlock[];
+
+  /** 0–N conceptual diagrams (funnels, journeys, canvases, etc.). */
+  diagrams?: DiagramBlock[];
+
+  /** 0–N image / illustration references. */
+  images?: ImageBlock[];
+
+  /** 0–N example collections (e.g. example offers, messages). */
+  examples?: ExampleBlock[];
+
+  /**
+   * Concrete action items for this specific section.
+   * These should be very practical, beginner-friendly steps.
+   */
+  nextMoves?: string[];
+};
+
+/**
+ * A logical section of the blueprint (e.g. "Executive Overview",
+ * "Market & Demand", "Offer & Pricing").
+ *
+ * The UI will:
+ * - use `id` as a stable key and for URLs / analytics,
+ * - show `title` and `eyebrow` in the header,
+ * - render blocks from `content` in order.
+ */
+export type BlueprintSection = {
+  /** Stable identifier, e.g. "executive-overview" */
+  id: string;
+  /** Human-facing section title, e.g. "Executive Overview" */
+  title: string;
+  /** Small label above the title, e.g. "High-level snapshot" */
+  eyebrow?: string;
+  /** Main content blocks for this section. */
+  content: SectionContent;
+};
+
+/**
+ * The full, modern NicheRoot blueprint shape.
+ * This is what the /api/generate-blueprint route should return
+ * and what the /blueprint page should render.
+ */
 export type BusinessBlueprint = {
-  executiveSummary: {
-    model: string;
-    audience: string;
-    startupCost: string;           // e.g. "Low", "Medium", "High"
-    timeToFirstResults: string;    // e.g. "2–4 weeks"
-    complexity: string;            // e.g. "Low to Medium"
-    metrics: {
-      riskScore: number;          // 0–100
-      skillFit: number;           // 0–100
-      demandScore: number;        // 0–100
-      monetizationScore: number;  // 0–100
-    };
-    nextMoves: string[];          // 3–7 bullets specific to direction check
-  };
+  /** High-level labels and scores used in the hero and summary strip. */
+  meta: BlueprintMeta;
 
-  founderFit: {
-    summary: string;
-    radar: {
-      riskTolerance: number;     // 0–100
-      availableTime: number;     // 0–100
-      availableCapital: number;  // 0–100
-      skillLeverage: number;     // 0–100
-      marketPreference: number;  // 0–100
-      workStyle: number;         // 0–100
-    };
-    nextMoves: string[];         // e.g. adjust hours, risk, capital, etc.
-  };
+  /**
+   * Ordered list of sections (Executive Overview, Founder Fit,
+   * Market, Competition, etc.). The UI will drive the sidebar
+   * and active tab state from this array.
+   */
+  sections: BlueprintSection[];
 
-  businessModel: {
-    description: string;
-    valueChain: string[];        // 3–7 steps
-    nextMoves: string[];         // actions to refine offers / delivery
-  };
-
-  marketAnalysis: {
-    overview: string;
-    demandTrend: {
-      year: number;              // e.g. 2020–2024
-      value: number;             // 0–100 demand index
-    }[];
-    segments: {
-      name: string;
-      size: string;              // e.g. "Small", "Medium"
-      opportunity: string;
-    }[];
-    nextMoves: string[];         // research/validation tasks
-  };
-
-  competition: {
-    table: {
-      name: string;
-      strength: string;
-      weakness: string;
-      differentiation: string;
-    }[];
-    quadrant: {
-      xLabel: string;
-      yLabel: string;
-    };
-    nextMoves: string[];         // positioning & differentiation actions
-  };
-
-  targetAudience: {
-    persona: {
-      name: string;
-      description: string;
-      pains: string[];
-      goals: string[];
-      motivations: string[];
-    };
-    nextMoves: string[];         // e.g. interviews, surveys, channel tests
-  };
-
-  valueProposition: {
-    pains: string[];
-    gains: string[];
-    painRelievers: string[];
-    gainCreators: string[];
-    nextMoves: string[];         // refine messaging, offers, proof, etc.
-  };
-
-  monetization: {
-    streams: {
-      name: string;
-      percent: number;
-      description: string;
-    }[];
-    pricing: {
-      low: number;
-      recommended: number;
-      premium: number;
-    };
-    justification: string;
-    nextMoves: string[];         // tests, bundles, payment model actions
-  };
-
-  financials: {
-    projection: {
-      month: string;             // "Month 1" … "Month 12"
-      revenue: number;
-      expenses: number;
-    }[];
-    costBreakdown: {
-      category: string;
-      percent: number;
-    }[];
-    assumptions: {
-      key: string;
-      value: string;
-      reason?: string;
-    }[];
-    nextMoves: string[];         // financial checks, buffers, targets
-  };
-
-  actionPlan: {
-    timeline: {
-      week: string;              // e.g. "Week 1–2"
-      tasks: string[];
-    }[];
-    nextMoves: string[];         // high-priority execution moves
-  };
-
-  risks: {
-    matrix: {
-      risk: string;
-      probability: number;       // 0–100
-      impact: number;            // 0–100
-    }[];
-    mitigations: {
-      risk: string;
-      strategy: string;
-    }[];
-    nextMoves: string[];         // monitoring + mitigation steps
-  };
-
-  tools: {
-    category: string;
-    list: {
-      name: string;
-      purpose: string;
-    }[];
-    nextMoves: string[];         // what to set up first & how
-  };
-
-  sources: {
-    reasoning: string[];            // how estimates were made
-    suggestedVerifications: string[]; // where to verify in real world
-  };
-
-  // Global checklist used by the bottom strip
-  checklist: string[];              // 10–20 bullets
+  /**
+   * Global checklist of concrete steps from zero to first stable revenue.
+   * These are separate from per-section "nextMoves" and can be used
+   * in a sticky footer, sidebar or dedicated "Checklist" tab.
+   */
+  globalChecklist: string[];
 };

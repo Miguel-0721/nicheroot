@@ -27,14 +27,22 @@ type SavedBlueprint = {
   data: BusinessBlueprint;
 };
 
+/* --------------------------------------------------
+   FIXED FOR BLUEPRINT V2
+-------------------------------------------------- */
 function createLabel(data: BusinessBlueprint, createdAtISO: string): string {
-  const raw = data.executiveSummary.model.trim();
+  const raw = data.meta?.modelName?.trim() ?? "Blueprint";
+
   const date = new Date(createdAtISO).toLocaleString(undefined, {
     dateStyle: "short",
     timeStyle: "short",
   });
+
   if (!raw) return `Blueprint · ${date}`;
-  return raw.length > 70 ? raw.slice(0, 70) + "… · " + date : raw + " · " + date;
+
+  return raw.length > 70
+    ? raw.slice(0, 70) + "… · " + date
+    : raw + " · " + date;
 }
 
 export default function QuestionsPage() {
@@ -48,15 +56,14 @@ export default function QuestionsPage() {
   const [error, setError] = useState<string | null>(null);
   const [userInput, setUserInput] = useState("");
 
-  // -------------------------------
-  // LOAD INTRO FROM localStorage
-  // -------------------------------
+  /* --------------------------------------------------
+     LOAD INTRO FROM LOCALSTORAGE
+  -------------------------------------------------- */
   useEffect(() => {
     if (typeof window === "undefined") return;
     const saved = localStorage.getItem("nicheroot_userInput");
 
     if (!saved || saved.trim() === "") {
-      // No intro → send back to /start
       router.push("/start");
       return;
     }
@@ -64,13 +71,12 @@ export default function QuestionsPage() {
     setUserInput(saved);
   }, [router]);
 
-  // -------------------------------
-  // FIRST AUTO QUESTION LOAD
-  // -------------------------------
+  /* --------------------------------------------------
+     FIRST QUESTION AUTO-LOAD
+  -------------------------------------------------- */
   useEffect(() => {
     if (!userInput) return;
     fetchQuestion(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [userInput]);
 
   async function fetchQuestion(choice: "A" | "B" | null) {
@@ -95,7 +101,6 @@ export default function QuestionsPage() {
       }
 
       const data = await res.json();
-
       if (!data.success || !data.question) {
         throw new Error(data.error || "No question returned.");
       }
@@ -113,9 +118,9 @@ export default function QuestionsPage() {
     setSelected(key);
   }
 
-  // -------------------------------
-  // FINAL + NEXT LOGIC
-  // -------------------------------
+  /* --------------------------------------------------
+     FINAL STEP → GENERATE BLUEPRINT
+  -------------------------------------------------- */
   async function goNext() {
     if (!selected || !question) return;
 
@@ -134,7 +139,6 @@ export default function QuestionsPage() {
 
     setHistory(newHistory);
 
-    // ========== FINAL STEP → GENERATE BLUEPRINT ==========
     if (step >= MAX_STEPS) {
       try {
         setLoading(true);
@@ -156,7 +160,7 @@ export default function QuestionsPage() {
 
         const blueprint: BusinessBlueprint = await res.json();
 
-        // Save to localStorage with a short ID → avoid huge URL
+        // Save to localStorage
         let id = Date.now().toString();
         if (typeof window !== "undefined") {
           try {
@@ -172,17 +176,15 @@ export default function QuestionsPage() {
               { id, createdAt, label, data: blueprint },
             ];
 
-            const trimmed = updated.slice(-8); // keep last 8
+            const trimmed = updated.slice(-8);
             localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
 
-            // if id changed by some logic in future we still keep var
             id = trimmed[trimmed.length - 1].id;
           } catch (e) {
-            console.error("Failed to save blueprint to localStorage:", e);
+            console.error("Failed to save blueprint:", e);
           }
         }
 
-        // Redirect with small query param → no more 431
         router.push(`/blueprint?id=${id}`);
         return;
       } catch (err: any) {
@@ -193,7 +195,6 @@ export default function QuestionsPage() {
       }
     }
 
-    // ========== OTHERWISE → CONTINUE QUESTIONS ==========
     const nextStep = step + 1;
     setStep(nextStep);
     setSelected(null);
@@ -218,13 +219,11 @@ export default function QuestionsPage() {
             </div>
 
             <h1 className="text-2xl font-semibold tracking-tight text-gray-900 sm:text-3xl">
-              Question {step}{" "}
-              <span className="text-[var(--brand-500)]">/ {MAX_STEPS}</span>
+              Question {step} <span className="text-[var(--brand-500)]">/ {MAX_STEPS}</span>
             </h1>
 
             <p className="mt-2 max-w-xl text-sm text-gray-600">
-              Smart trade-off questions that match your goals to one strong
-              business direction.
+              Smart trade-off questions that match your goals to a strong business direction.
             </p>
           </div>
 

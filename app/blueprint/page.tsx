@@ -2,14 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import type { BusinessBlueprint } from "@/types/blueprint-types";
+import type {
+  BusinessBlueprint,
+  BlueprintSection,
+  SectionContent,
+  ChartBlock,
+  DiagramBlock,
+} from "@/types/blueprint-types";
 
 import {
-  RadarChart,
-  Radar,
-  PolarGrid,
-  PolarAngleAxis,
-  PolarRadiusAxis,
   ResponsiveContainer,
   LineChart,
   Line,
@@ -19,6 +20,13 @@ import {
   CartesianGrid,
   PieChart,
   Pie,
+  BarChart,
+  Bar,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
 } from "recharts";
 
 type SavedBlueprint = {
@@ -30,30 +38,11 @@ type SavedBlueprint = {
 
 const STORAGE_KEY = "nicheroot_blueprints_v2";
 
-const TABS = [
-  { id: "executive", label: "Executive summary", icon: "✨" },
-  { id: "founderFit", label: "Founder fit", icon: "🧑‍💻" },
-  { id: "model", label: "Business model", icon: "📊" },
-  { id: "market", label: "Market & demand", icon: "📈" },
-  { id: "competition", label: "Competition", icon: "⚔️" },
-  { id: "audience", label: "Target audience", icon: "🎯" },
-  { id: "value", label: "Value proposition", icon: "💎" },
-  { id: "monetization", label: "Monetization & pricing", icon: "💰" },
-  { id: "financials", label: "Financials", icon: "📑" },
-  { id: "action", label: "Action plan", icon: "✅" },
-  { id: "risks", label: "Risks", icon: "⚠️" },
-  { id: "tools", label: "Tools & stack", icon: "🧰" },
-  { id: "sources", label: "Reasoning & sources", icon: "🔍" },
-  { id: "checklist", label: "Checklist", icon: "☑️" },
-] as const;
-
-type TabId = (typeof TABS)[number]["id"];
-
 export default function BlueprintPage() {
   const searchParams = useSearchParams();
 
   const [blueprint, setBlueprint] = useState<BusinessBlueprint | null>(null);
-  const [activeTab, setActiveTab] = useState<TabId>("executive");
+  const [activeTab, setActiveTab] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [savedList, setSavedList] = useState<SavedBlueprint[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
@@ -65,29 +54,52 @@ export default function BlueprintPage() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       const parsed: SavedBlueprint[] = raw ? JSON.parse(raw) : [];
-      setSavedList(parsed);
+
+      // Keep only v2 blueprints (with meta + sections)
+      const valid = parsed.filter(
+        (b) =>
+          b &&
+          b.data &&
+          (b.data as any).meta &&
+          Array.isArray((b.data as any).sections)
+      );
+
+      setSavedList(valid);
 
       const idFromUrl = searchParams.get("id");
 
       if (idFromUrl) {
-        const found = parsed.find((b) => b.id === idFromUrl);
+        const found = valid.find((b) => b.id === idFromUrl);
         if (found) {
           setBlueprint(found.data);
           setCurrentId(found.id);
+          if (found.data.sections?.length > 0) {
+            setActiveTab(found.data.sections[0].id);
+          } else {
+            setActiveTab("checklist");
+          }
         } else {
           setBlueprint(null);
+          setActiveTab(null);
         }
-      } else if (parsed.length > 0) {
+      } else if (valid.length > 0) {
         // fallback: last blueprint
-        const last = parsed[parsed.length - 1];
+        const last = valid[valid.length - 1];
         setBlueprint(last.data);
         setCurrentId(last.id);
+        if (last.data.sections?.length > 0) {
+          setActiveTab(last.data.sections[0].id);
+        } else {
+          setActiveTab("checklist");
+        }
       } else {
         setBlueprint(null);
+        setActiveTab(null);
       }
     } catch (e) {
       console.error("Failed to load blueprints from localStorage:", e);
       setBlueprint(null);
+      setActiveTab(null);
     }
 
     setLoading(false);
@@ -96,59 +108,54 @@ export default function BlueprintPage() {
   /* ---------------- DISPLAY NAME ---------------- */
   const displayName = useMemo(() => {
     if (!blueprint) return "Your blueprint";
-    const raw = blueprint.executiveSummary.model.trim();
+    const raw = blueprint.meta?.modelName?.trim() ?? "";
+    if (!raw) return "Your blueprint";
     return raw.length < 90 ? raw : raw.slice(0, 90) + "…";
   }, [blueprint]);
 
-  /* ---------------- SCORE CARDS (SAFE, FLEXIBLE) ---------------- */
+  /* ---------------- SCORE CARDS ---------------- */
   const scoreCards = useMemo(() => {
-    if (!blueprint) return [];
+    if (!blueprint?.meta?.scores) return [];
+    const s = blueprint.meta.scores;
 
-    const exec: any = blueprint.executiveSummary as any;
-
-    const metrics = exec.metrics || {};
-    const items = [
+    return [
       {
         key: "risk",
         label: "Risk score",
-        value: metrics.riskScore ?? exec.riskScore,
-        hint: "How aggressive this model is.",
+        value: s.risk,
+        hint: "How aggressive and fragile this model is.",
       },
       {
-        key: "skill",
+        key: "skillFit",
         label: "Skill fit",
-        value: metrics.skillFit ?? exec.skillFitScore,
+        value: s.skillFit,
         hint: "How well it matches your strengths.",
       },
       {
         key: "demand",
         label: "Demand score",
-        value: metrics.demandScore ?? exec.demandScore,
+        value: s.demand,
         hint: "Estimated market appetite.",
       },
       {
         key: "monetization",
         label: "Monetization",
-        value: metrics.monetizationScore ?? exec.monetizationScore,
-        hint: "Strength of revenue engine.",
+        value: s.monetization,
+        hint: "Strength of the revenue engine.",
       },
     ];
-
-    return items.filter(
-      (item) => item.value !== undefined && item.value !== null
-    );
   }, [blueprint]);
 
-  /* ---------------- NEXT ACTIONS ---------------- */
+  /* ---------------- NEXT ACTIONS STRIP ---------------- */
   const nextActions = useMemo(() => {
     if (!blueprint) return [];
-    if (blueprint.checklist?.length) return blueprint.checklist.slice(0, 5);
-
-    if (blueprint.actionPlan?.timeline?.length) {
-      const tasks = blueprint.actionPlan.timeline.flatMap((w) => w.tasks);
-      return tasks.slice(0, 5);
+    if (blueprint.globalChecklist?.length) {
+      return blueprint.globalChecklist.slice(0, 5);
     }
-
+    const firstSection = blueprint.sections?.[0];
+    if (firstSection?.content?.nextMoves?.length) {
+      return firstSection.content.nextMoves.slice(0, 5);
+    }
     return [];
   }, [blueprint]);
 
@@ -157,12 +164,29 @@ export default function BlueprintPage() {
     if (!found) return;
     setCurrentId(id);
     setBlueprint(found.data);
-    setActiveTab("executive");
+    if (found.data.sections?.length > 0) {
+      setActiveTab(found.data.sections[0].id);
+    } else {
+      setActiveTab("checklist");
+    }
   }
 
   function handlePrint() {
     if (typeof window !== "undefined") window.print();
   }
+
+  // Build tabs dynamically from sections + checklist
+  const sectionTabs =
+    blueprint?.sections?.map((section) => ({
+      id: section.id,
+      label: section.title,
+      icon: iconForSection(section.id),
+    })) ?? [];
+
+  const allTabs = [
+    ...sectionTabs,
+    { id: "checklist", label: "Checklist", icon: "☑️" },
+  ];
 
   /* ---------------- LOADING / EMPTY ---------------- */
   if (loading) {
@@ -183,7 +207,12 @@ export default function BlueprintPage() {
     );
   }
 
-  const { executiveSummary } = blueprint;
+  const activeSection =
+    activeTab && activeTab !== "checklist"
+      ? blueprint.sections.find((s) => s.id === activeTab) ?? null
+      : null;
+
+  const meta = blueprint.meta;
 
   /* =====================================================================
      PAGE
@@ -207,7 +236,7 @@ export default function BlueprintPage() {
               </h1>
               <p className="mt-2 max-w-xl text-sm text-gray-600">
                 Generated from your answers and trade-offs. Treat this as a
-                living plan you can refine over time.
+                living plan you refine as you learn more.
               </p>
             </div>
 
@@ -241,19 +270,16 @@ export default function BlueprintPage() {
 
           {/* SUMMARY STRIP */}
           <section className="grid gap-3 md:grid-cols-3 xl:grid-cols-5">
-            <SummaryCard label="Business model" value={executiveSummary.model} />
-            <SummaryCard label="Audience" value={executiveSummary.audience} />
+            <SummaryCard label="Business model" value={meta.modelName} />
+            <SummaryCard label="Difficulty" value={meta.difficulty} />
+            <SummaryCard label="Startup cost" value={meta.startupCost} />
             <SummaryCard
-              label="Startup cost"
-              value={executiveSummary.startupCost}
+              label="Time to first results"
+              value={meta.expectedTimeline}
             />
             <SummaryCard
-              label="Time to results"
-              value={executiveSummary.timeToFirstResults}
-            />
-            <SummaryCard
-              label="Complexity"
-              value={executiveSummary.complexity}
+              label="Overall profile"
+              value={`${meta.difficulty} · ${meta.startupCost}`}
             />
           </section>
 
@@ -296,7 +322,7 @@ export default function BlueprintPage() {
                 Sections
               </p>
               <div className="flex flex-col gap-1">
-                {TABS.map((tab) => (
+                {allTabs.map((tab) => (
                   <button
                     key={tab.id}
                     onClick={() => setActiveTab(tab.id)}
@@ -318,268 +344,38 @@ export default function BlueprintPage() {
                 How to use this
               </p>
               <p className="mb-1">
-                Start at the top and work your way down. Each section ends with{" "}
-                <span className="font-semibold">Next moves</span> — treat these
-                as your immediate action items.
+                Move through the sections in order. Each section ends with{" "}
+                <span className="font-semibold">Next moves</span> — those are
+                your immediate action steps.
               </p>
               <p className="mt-1 text-[11px] text-gray-600">
-                Revisit this blueprint after big decisions or new insights.
+                Revisit this blueprint after you test assumptions or make major
+                decisions.
               </p>
             </div>
           </aside>
 
           {/* CONTENT CARD */}
           <div className="space-y-6 rounded-3xl bg-white p-7 shadow-lg ring-1 ring-black/5">
-            {/* EXECUTIVE TAB */}
-            {activeTab === "executive" && (
+            {/* SECTION CONTENT */}
+            {activeTab === "checklist" ? (
               <SectionBlock
-                title="Executive summary"
-                eyebrow="High-level snapshot of the business."
+                title="Global checklist"
+                eyebrow="High-level to-do list from zero to first stable revenue."
               >
-                <p className="text-[15px]">{executiveSummary.model}</p>
-                <p className="mt-3 text-[14px] text-gray-600">
-                  <span className="font-semibold">Audience:</span>{" "}
-                  {executiveSummary.audience}
-                </p>
-
-                <NextMovesBlock items={executiveSummary.nextMoves} />
+                <ChecklistBlock checklist={blueprint.globalChecklist} />
               </SectionBlock>
-            )}
-
-            {/* FOUNDER FIT */}
-            {activeTab === "founderFit" && (
+            ) : activeSection ? (
               <SectionBlock
-                title="Founder fit"
-                eyebrow="How well this business matches your profile."
+                title={activeSection.title}
+                eyebrow={activeSection.eyebrow}
               >
-                <div className="grid gap-6 md:grid-cols-[1.2fr,1fr]">
-                  <div className="h-64">
-                    <FounderFitRadar data={blueprint.founderFit.radar} />
-                  </div>
-                  <p className="text-[15px]">{blueprint.founderFit.summary}</p>
-                </div>
-
-                <NextMovesBlock items={blueprint.founderFit.nextMoves} />
+                <SectionContentRenderer content={activeSection.content} />
               </SectionBlock>
-            )}
-
-            {/* BUSINESS MODEL */}
-            {activeTab === "model" && (
-              <SectionBlock
-                title="Business model"
-                eyebrow="Core engine of how money is made."
-              >
-                <p className="mb-4 text-[15px]">
-                  {blueprint.businessModel.description}
-                </p>
-
-                <div className="flex flex-wrap gap-2">
-                  {blueprint.businessModel.valueChain.map((step, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center gap-2 rounded-full bg-indigo-50 px-3 py-1 text-[13px]"
-                    >
-                      <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--brand-500)] text-[10px] text-white">
-                        {idx + 1}
-                      </span>
-                      {step}
-                    </div>
-                  ))}
-                </div>
-
-                <NextMovesBlock items={blueprint.businessModel.nextMoves} />
-              </SectionBlock>
-            )}
-
-            {/* MARKET */}
-            {activeTab === "market" && (
-              <SectionBlock
-                title="Market & demand"
-                eyebrow="Demand, growth and key segments."
-              >
-                <p className="mb-4 text-[15px]">
-                  {blueprint.marketAnalysis.overview}
-                </p>
-
-                <div className="grid gap-6 md:grid-cols-[1.1fr,1fr]">
-                  <div className="h-64">
-                    <DemandTrendChart
-                      data={blueprint.marketAnalysis.demandTrend}
-                    />
-                  </div>
-
-                  <div className="space-y-2 text-[13px]">
-                    <h3 className="font-semibold text-gray-800">
-                      Key segments
-                    </h3>
-                    {blueprint.marketAnalysis.segments.map((seg, idx) => (
-                      <div
-                        key={idx}
-                        className="rounded-xl bg-gray-50 p-3 ring-1 ring-gray-200"
-                      >
-                        <p className="font-semibold">
-                          {seg.name} · {seg.size}
-                        </p>
-                        <p className="text-[12px] text-gray-600">
-                          {seg.opportunity}
-                        </p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-
-                <NextMovesBlock items={blueprint.marketAnalysis.nextMoves} />
-              </SectionBlock>
-            )}
-
-            {/* COMPETITION */}
-            {activeTab === "competition" && (
-              <SectionBlock
-                title="Competition"
-                eyebrow="Who you’re up against and your edge."
-              >
-                <div className="overflow-x-auto text-[12px]">
-                  <table className="min-w-full border-separate border-spacing-y-1">
-                    <thead className="text-[11px] text-gray-500">
-                      <tr>
-                        <th className="px-2 py-1 text-left">Name</th>
-                        <th className="px-2 py-1 text-left">Strength</th>
-                        <th className="px-2 py-1 text-left">Weakness</th>
-                        <th className="px-2 py-1 text-left">
-                          Differentiation
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {blueprint.competition.table.map((c, idx) => (
-                        <tr key={idx} className="rounded-xl bg-gray-50">
-                          <td className="px-2 py-2 font-semibold">{c.name}</td>
-                          <td className="px-2 py-2">{c.strength}</td>
-                          <td className="px-2 py-2">{c.weakness}</td>
-                          <td className="px-2 py-2">{c.differentiation}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                <NextMovesBlock items={blueprint.competition.nextMoves} />
-              </SectionBlock>
-            )}
-
-            {/* AUDIENCE */}
-            {activeTab === "audience" && (
-              <SectionBlock
-                title="Target audience"
-                eyebrow="Who you’re serving and what they need."
-              >
-                <PersonaBlock persona={blueprint.targetAudience.persona} />
-
-                <NextMovesBlock items={blueprint.targetAudience.nextMoves} />
-              </SectionBlock>
-            )}
-
-            {/* VALUE PROP */}
-            {activeTab === "value" && (
-              <SectionBlock
-                title="Value proposition"
-                eyebrow="Why customers choose you over others."
-              >
-                <ValueCanvasBlock valueProp={blueprint.valueProposition} />
-
-                <NextMovesBlock items={blueprint.valueProposition.nextMoves} />
-              </SectionBlock>
-            )}
-
-            {/* MONETIZATION */}
-            {activeTab === "monetization" && (
-              <SectionBlock
-                title="Monetization & pricing"
-                eyebrow="Revenue streams and pricing structure."
-              >
-                <MonetizationBlock monetization={blueprint.monetization} />
-
-                <NextMovesBlock items={blueprint.monetization.nextMoves} />
-              </SectionBlock>
-            )}
-
-            {/* FINANCIALS */}
-            {activeTab === "financials" && (
-              <SectionBlock
-                title="Financials"
-                eyebrow="Revenue, costs and cost structure."
-              >
-                <div className="grid gap-6 md:grid-cols-[1.1fr,1fr]">
-                  <div className="h-72">
-                    <FinancialProjectionChart
-                      data={blueprint.financials.projection}
-                    />
-                  </div>
-                  <div className="h-72">
-                    <CostBreakdownPie
-                      data={blueprint.financials.costBreakdown}
-                    />
-                  </div>
-                </div>
-
-                <NextMovesBlock items={blueprint.financials.nextMoves} />
-              </SectionBlock>
-            )}
-
-            {/* ACTION PLAN */}
-            {activeTab === "action" && (
-              <SectionBlock
-                title="Action plan"
-                eyebrow="Concrete steps to get moving."
-              >
-                <ActionTimeline timeline={blueprint.actionPlan.timeline} />
-
-                <NextMovesBlock items={blueprint.actionPlan.nextMoves} />
-              </SectionBlock>
-            )}
-
-            {/* RISKS */}
-            {activeTab === "risks" && (
-              <SectionBlock
-                title="Risks"
-                eyebrow="What could go wrong and how to respond."
-              >
-                <RiskBlock risks={blueprint.risks} />
-
-                <NextMovesBlock items={blueprint.risks.nextMoves} />
-              </SectionBlock>
-            )}
-
-            {/* TOOLS */}
-            {activeTab === "tools" && (
-              <SectionBlock
-                title="Tools & stack"
-                eyebrow="Suggested tools and infrastructure."
-              >
-                <ToolsBlock tools={blueprint.tools} />
-
-                <NextMovesBlock items={blueprint.tools.nextMoves} />
-              </SectionBlock>
-            )}
-
-            {/* SOURCES */}
-            {activeTab === "sources" && (
-              <SectionBlock
-                title="Reasoning & sources"
-                eyebrow="How this plan was constructed."
-              >
-                <SourcesBlock sources={blueprint.sources} />
-              </SectionBlock>
-            )}
-
-            {/* CHECKLIST */}
-            {activeTab === "checklist" && (
-              <SectionBlock
-                title="Checklist"
-                eyebrow="Quick progress tracker."
-              >
-                <ChecklistBlock checklist={blueprint.checklist} />
-              </SectionBlock>
+            ) : (
+              <p className="text-sm text-gray-500">
+                Select a section from the sidebar to view the details.
+              </p>
             )}
           </div>
         </section>
@@ -606,16 +402,6 @@ export default function BlueprintPage() {
    SUBCOMPONENTS
 ===================================================================== */
 
-function createLabel(data: BusinessBlueprint, createdAtISO: string): string {
-  const raw = data.executiveSummary.model.trim();
-  const date = new Date(createdAtISO).toLocaleString(undefined, {
-    dateStyle: "short",
-    timeStyle: "short",
-  });
-  if (!raw) return `Blueprint · ${date}`;
-  return raw.length > 70 ? raw.slice(0, 70) + "… · " + date : raw + " · " + date;
-}
-
 function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl bg-white/90 p-4 text-xs shadow-sm ring-1 ring-gray-200">
@@ -623,22 +409,6 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
         {label}
       </p>
       <p className="text-[13px] text-gray-800 line-clamp-3">{value}</p>
-    </div>
-  );
-}
-
-function NextMovesBlock({ items }: { items?: string[] }) {
-  if (!items || items.length === 0) return null;
-  return (
-    <div className="mt-6 rounded-xl bg-gray-50 p-4 text-[13px] ring-1 ring-gray-200">
-      <p className="mb-2 text-[11px] uppercase tracking-wide text-gray-500">
-        Next moves
-      </p>
-      <ul className="space-y-1 list-disc pl-4">
-        {items.map((it, idx) => (
-          <li key={idx}>{it}</li>
-        ))}
-      </ul>
     </div>
   );
 }
@@ -665,317 +435,365 @@ function SectionBlock({
   );
 }
 
-function FounderFitRadar({ data }: any) {
-  const dataset = [
-    { metric: "Risk tolerance", value: data.riskTolerance },
-    { metric: "Available time", value: data.availableTime },
-    { metric: "Available capital", value: data.availableCapital },
-    { metric: "Skill leverage", value: data.skillLeverage },
-    { metric: "Market preference", value: data.marketPreference },
-    { metric: "Work style", value: data.workStyle },
-  ];
-
+function NextMovesBlock({ items }: { items?: string[] }) {
+  if (!items || items.length === 0) return null;
   return (
-    <ResponsiveContainer>
-      <RadarChart data={dataset}>
-        <PolarGrid />
-        <PolarAngleAxis dataKey="metric" />
-        <PolarRadiusAxis angle={30} domain={[0, 100]} />
-        <Radar
-          dataKey="value"
-          stroke="#6366F1"
-          fill="#6366F1"
-          fillOpacity={0.3}
-        />
-      </RadarChart>
-    </ResponsiveContainer>
-  );
-}
-
-function DemandTrendChart({ data }: any) {
-  return (
-    <ResponsiveContainer>
-      <LineChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="year" />
-        <YAxis domain={[0, 100]} />
-        <Tooltip />
-        <Line
-          type="monotone"
-          dataKey="value"
-          stroke="#6366F1"
-          strokeWidth={2}
-          dot={false}
-        />
-      </LineChart>
-    </ResponsiveContainer>
-  );
-}
-
-function FinancialProjectionChart({ data }: any) {
-  return (
-    <ResponsiveContainer>
-      <LineChart data={data}>
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="month" />
-        <YAxis />
-        <Tooltip />
-        <Line
-          type="monotone"
-          dataKey="revenue"
-          stroke="#10B981"
-          strokeWidth={2}
-        />
-        <Line
-          type="monotone"
-          dataKey="expenses"
-          stroke="#EF4444"
-          strokeWidth={2}
-        />
-      </LineChart>
-    </ResponsiveContainer>
-  );
-}
-
-function CostBreakdownPie({ data }: any) {
-  const formatted = data.map((d: any) => ({
-    name: d.category,
-    value: d.percent,
-  }));
-  return (
-    <ResponsiveContainer>
-      <PieChart>
-        <Pie data={formatted} dataKey="value" nameKey="name" fill="#6366F1" label />
-      </PieChart>
-    </ResponsiveContainer>
-  );
-}
-
-function PersonaBlock({ persona }: any) {
-  return (
-    <div className="space-y-4 text-[14px]">
-    <h3 className="text-lg font-semibold text-gray-900">{persona.name}</h3>
-    <p>{persona.description}</p>
-
-    <div className="grid gap-4 md:grid-cols-3">
-      <div>
-        <h4 className="font-semibold">Pains</h4>
-        <ul className="list-disc pl-4">
-          {persona.pains.map((p: string, i: number) => (
-            <li key={i}>{p}</li>
-          ))}
-        </ul>
-      </div>
-
-      <div>
-        <h4 className="font-semibold">Goals</h4>
-        <ul className="list-disc pl-4">
-          {persona.goals.map((p: string, i: number) => (
-            <li key={i}>{p}</li>
-          ))}
-        </ul>
-      </div>
-
-      <div>
-        <h4 className="font-semibold">Motivations</h4>
-        <ul className="list-disc pl-4">
-          {persona.motivations.map((p: string, i: number) => (
-            <li key={i}>{p}</li>
-          ))}
-        </ul>
-      </div>
-    </div>
-  </div>
-  );
-}
-
-function ValueCanvasBlock({ valueProp }: any) {
-  return (
-    <div className="grid gap-6 text-[14px] md:grid-cols-2">
-      <div className="space-y-3 rounded-xl bg-gray-50 p-4 ring-1 ring-gray-200">
-        <h4 className="font-semibold">Pains</h4>
-        <ul className="list-disc pl-4">
-          {valueProp.pains.map((p: any, i: number) => (
-            <li key={i}>{p}</li>
-          ))}
-        </ul>
-
-        <h4 className="font-semibold">Pain relievers</h4>
-        <ul className="list-disc pl-4">
-          {valueProp.painRelievers.map((p: any, i: number) => (
-            <li key={i}>{p}</li>
-          ))}
-        </ul>
-      </div>
-
-      <div className="space-y-3 rounded-xl bg-gray-50 p-4 ring-1 ring-gray-200">
-        <h4 className="font-semibold">Gains</h4>
-        <ul className="list-disc pl-4">
-          {valueProp.gains.map((p: any, i: number) => (
-            <li key={i}>{p}</li>
-          ))}
-        </ul>
-
-        <h4 className="font-semibold">Gain creators</h4>
-        <ul className="list-disc pl-4">
-          {valueProp.gainCreators.map((p: any, i: number) => (
-            <li key={i}>{p}</li>
-          ))}
-        </ul>
-      </div>
+    <div className="mt-6 rounded-xl bg-gray-50 p-4 text-[13px] ring-1 ring-gray-200">
+      <p className="mb-2 text-[11px] uppercase tracking-wide text-gray-500">
+        Next moves
+      </p>
+      <ul className="space-y-1 list-disc pl-4">
+        {items.map((it, idx) => (
+          <li key={idx}>{it}</li>
+        ))}
+      </ul>
     </div>
   );
 }
 
-function MonetizationBlock({ monetization }: any) {
+/* ---------- CONTENT RENDERER FOR SECTIONS ---------- */
+
+function SectionContentRenderer({ content }: { content: SectionContent }) {
+  const {
+    paragraphs,
+    lists,
+    tables,
+    charts,
+    diagrams,
+    images,
+    examples,
+    nextMoves,
+  } = content;
+
   return (
-    <div className="space-y-6 text-[14px]">
-      <div>
-        <h3 className="font-semibold text-gray-900">Revenue streams</h3>
-        {monetization.streams.map((s: any, i: number) => (
-          <div
-            key={i}
-            className="mt-2 rounded-xl bg-gray-50 p-3 ring-1 ring-gray-200"
-          >
-            <p className="font-semibold">
-              {s.name} · {s.percent}%
-            </p>
-            <p className="text-[13px] text-gray-600">{s.description}</p>
+    <div className="space-y-6">
+      {/* paragraphs */}
+      {paragraphs && paragraphs.length > 0 && (
+        <div className="space-y-3">
+          {paragraphs.map((p, idx) => (
+            <p key={idx}>{p}</p>
+          ))}
+        </div>
+      )}
+
+      {/* lists */}
+      {lists && lists.length > 0 && (
+        <div className="grid gap-4 md:grid-cols-2">
+          {lists.map((block, idx) => (
+            <div
+              key={idx}
+              className="rounded-xl bg-gray-50 p-4 text-[13px] ring-1 ring-gray-200"
+            >
+              {block.title && (
+                <h3 className="mb-2 text-[13px] font-semibold text-gray-900">
+                  {block.title}
+                </h3>
+              )}
+              <ul className="list-disc pl-4 space-y-1">
+                {block.items.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* tables */}
+      {tables && tables.length > 0 && (
+        <div className="space-y-4">
+          {tables.map((table, idx) => (
+            <div
+              key={idx}
+              className="overflow-x-auto rounded-xl bg-gray-50 p-3 text-[12px] ring-1 ring-gray-200"
+            >
+              {table.title && (
+                <p className="mb-2 text-[11px] font-semibold uppercase text-gray-600">
+                  {table.title}
+                </p>
+              )}
+              <table className="min-w-full border-separate border-spacing-y-1">
+                <thead className="text-[11px] text-gray-500">
+                  <tr>
+                    {table.columns.map((col, i) => (
+                      <th key={i} className="px-2 py-1 text-left">
+                        {col}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {table.rows.map((row, rIdx) => (
+                    <tr key={rIdx} className="bg-white/70">
+                      {row.map((cell, cIdx) => (
+                        <td key={cIdx} className="px-2 py-2">
+                          {cell}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* charts */}
+      {charts && charts.length > 0 && (
+        <div className="grid gap-6 md:grid-cols-2">
+          {charts.map((chart, idx) => (
+            <ChartBlockRenderer key={idx} chart={chart} />
+          ))}
+        </div>
+      )}
+
+      {/* diagrams */}
+      {diagrams && diagrams.length > 0 && (
+        <div className="space-y-4">
+          {diagrams.map((diagram, idx) => (
+            <DiagramBlockRenderer key={idx} diagram={diagram} />
+          ))}
+        </div>
+      )}
+
+      {/* images */}
+      {images && images.length > 0 && (
+        <div className="grid gap-4 md:grid-cols-2">
+          {images.map((img, idx) => (
+            <figure
+              key={idx}
+              className="overflow-hidden rounded-xl bg-gray-50 ring-1 ring-gray-200"
+            >
+              <img
+                src={img.url}
+                alt={img.caption || img.title || "Blueprint illustration"}
+                className="h-48 w-full object-cover"
+              />
+              {(img.title || img.caption) && (
+                <figcaption className="p-3 text-[12px] text-gray-700">
+                  {img.title && (
+                    <p className="font-semibold text-gray-900">{img.title}</p>
+                  )}
+                  {img.caption && <p>{img.caption}</p>}
+                </figcaption>
+              )}
+            </figure>
+          ))}
+        </div>
+      )}
+
+      {/* examples */}
+      {examples && examples.length > 0 && (
+        <div className="space-y-3">
+          {examples.map((ex, idx) => (
+            <div
+              key={idx}
+              className="rounded-xl bg-indigo-50/80 p-4 text-[13px] ring-1 ring-indigo-100"
+            >
+              {ex.title && (
+                <p className="mb-2 text-[12px] font-semibold uppercase text-indigo-700">
+                  {ex.title}
+                </p>
+              )}
+              <ul className="list-disc pl-4 space-y-1">
+                {ex.items.map((item, i) => (
+                  <li key={i}>{item}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* next moves */}
+      <NextMovesBlock items={nextMoves} />
+    </div>
+  );
+}
+
+/* ---------- CHART RENDERER ---------- */
+
+function ChartBlockRenderer({ chart }: { chart: ChartBlock }) {
+  const { title, type, data, xKey, yKeys, note } = chart;
+
+  // Fallbacks
+  const safeXKey = xKey || (type === "pie" ? undefined : "label");
+  const safeYKeys = yKeys && yKeys.length > 0 ? yKeys : ["value"];
+
+  return (
+    <div className="flex h-64 flex-col rounded-xl bg-gray-50 p-4 ring-1 ring-gray-200">
+      {title && (
+        <p className="mb-2 text-[12px] font-semibold uppercase text-gray-600">
+          {title}
+        </p>
+      )}
+      <div className="flex-1">
+        {type === "line" && safeXKey ? (
+          <ResponsiveContainer>
+            <LineChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey={safeXKey} />
+              <YAxis />
+              <Tooltip />
+              {safeYKeys.map((key, idx) => (
+                <Line
+                  key={key}
+                  type="monotone"
+                  dataKey={key}
+                  stroke={idx === 0 ? "#6366F1" : "#10B981"}
+                  strokeWidth={2}
+                  dot={false}
+                />
+              ))}
+            </LineChart>
+          </ResponsiveContainer>
+        ) : type === "bar" && safeXKey ? (
+          <ResponsiveContainer>
+            <BarChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey={safeXKey} />
+              <YAxis />
+              <Tooltip />
+              {safeYKeys.map((key, idx) => (
+                <Bar
+                  key={key}
+                  dataKey={key}
+                  fill={idx === 0 ? "#6366F1" : "#10B981"}
+                  radius={[4, 4, 0, 0]}
+                />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+        ) : type === "pie" ? (
+          <ResponsiveContainer>
+            <PieChart>
+              <Pie
+                data={data}
+                dataKey={safeYKeys[0]}
+                nameKey={safeXKey || "name"}
+                fill="#6366F1"
+                label
+              />
+            </PieChart>
+          </ResponsiveContainer>
+        ) : type === "radar" && safeXKey && safeYKeys.length > 0 ? (
+          <ResponsiveContainer>
+            <RadarChart data={data}>
+              <PolarGrid />
+              <PolarAngleAxis dataKey={safeXKey} />
+              <PolarRadiusAxis angle={30} domain={[0, 100]} />
+              <Radar
+                dataKey={safeYKeys[0]}
+                stroke="#6366F1"
+                fill="#6366F1"
+                fillOpacity={0.3}
+              />
+            </RadarChart>
+          </ResponsiveContainer>
+        ) : type === "funnel" && safeXKey && safeYKeys.length > 0 ? (
+          // Simple funnel-style bar chart
+          <ResponsiveContainer>
+            <BarChart data={data} layout="vertical">
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis type="number" />
+              <YAxis type="category" dataKey={safeXKey} />
+              <Tooltip />
+              <Bar dataKey={safeYKeys[0]} fill="#6366F1" radius={[0, 4, 4, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : type === "heatmap" && safeXKey && safeYKeys.length > 0 ? (
+          // Simple bar-based heat proxy
+          <ResponsiveContainer>
+            <BarChart data={data}>
+              <CartesianGrid strokeDasharray="3 3" />
+              <XAxis dataKey={safeXKey} />
+              <YAxis />
+              <Tooltip />
+              <Bar dataKey={safeYKeys[0]} fill="#6366F1" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        ) : (
+          <p className="text-[12px] text-gray-500">
+            Chart configuration not recognised.
+          </p>
+        )}
+      </div>
+      {note && (
+        <p className="mt-2 text-[11px] text-gray-500">
+          {note}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/* ---------- DIAGRAM RENDERER ---------- */
+
+function DiagramBlockRenderer({ diagram }: { diagram: DiagramBlock }) {
+  const { title, type, nodes, connections, notes } = diagram;
+
+  // Build a simple linear flow if connections are present
+  const orderedNodes =
+    connections && connections.length > 0
+      ? buildLinearFlow(nodes, connections)
+      : nodes;
+
+  const chipColor =
+    type === "funnel"
+      ? "bg-emerald-50 text-emerald-800 ring-emerald-100"
+      : type === "customer-journey"
+      ? "bg-indigo-50 text-indigo-800 ring-indigo-100"
+      : type === "value-chain"
+      ? "bg-amber-50 text-amber-800 ring-amber-100"
+      : "bg-gray-50 text-gray-800 ring-gray-200";
+
+  return (
+    <div className="space-y-3 rounded-xl bg-white p-4 ring-1 ring-gray-200">
+      {title && (
+        <p className="text-[12px] font-semibold uppercase text-gray-700">
+          {title}
+        </p>
+      )}
+      <div className="flex flex-wrap items-center gap-2 text-[13px]">
+        {orderedNodes.map((node, idx) => (
+          <div key={idx} className="flex items-center gap-2">
+            <span
+              className={`rounded-full px-3 py-1 text-xs ring-1 ${chipColor}`}
+            >
+              {node}
+            </span>
+            {idx < orderedNodes.length - 1 && (
+              <span className="text-gray-400 text-sm">→</span>
+            )}
           </div>
         ))}
       </div>
-
-      <div>
-        <h3 className="font-semibold text-gray-900">Pricing</h3>
-        <div className="mt-2 grid grid-cols-3 gap-3 text-center">
-          <div className="rounded-xl bg-indigo-50 p-3">
-            <p className="text-xs uppercase text-gray-600">Low</p>
-            <p className="text-lg font-semibold">
-              ${monetization.pricing.low}
-            </p>
-          </div>
-
-          <div className="rounded-xl bg-indigo-100 p-3">
-            <p className="text-xs uppercase text-gray-600">Recommended</p>
-            <p className="text-lg font-semibold">
-              ${monetization.pricing.recommended}
-            </p>
-          </div>
-
-          <div className="rounded-xl bg-indigo-50 p-3">
-            <p className="text-xs uppercase text-gray-600">Premium</p>
-            <p className="text-lg font-semibold">
-              ${monetization.pricing.premium}
-            </p>
-          </div>
-        </div>
-      </div>
-
-      <p className="text-gray-700">{monetization.justification}</p>
-    </div>
-  );
-}
-
-function ActionTimeline({ timeline }: any) {
-  return (
-    <div className="space-y-4">
-      {timeline.map((t: any, idx: number) => (
-        <div
-          key={idx}
-          className="rounded-xl bg-gray-50 p-4 ring-1 ring-gray-200"
-        >
-          <p className="font-semibold text-gray-900">{t.week}</p>
-          <ul className="mt-2 list-disc pl-4">
-            {t.tasks.map((task: any, i: number) => (
-              <li key={i}>{task}</li>
-            ))}
-          </ul>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function RiskBlock({ risks }: any) {
-  return (
-    <div className="space-y-6 text-[14px]">
-      <div>
-        <h3 className="font-semibold text-gray-900">Risk matrix</h3>
-        {risks.matrix.map((r: any, i: number) => (
-          <div
-            key={i}
-            className="mt-2 rounded-xl bg-gray-50 p-3 ring-1 ring-gray-200"
-          >
-            <p className="font-semibold">{r.risk}</p>
-            <p className="text-[13px] text-gray-600">
-              Probability: {r.probability}/100 · Impact: {r.impact}/100
-            </p>
-          </div>
-        ))}
-      </div>
-
-      <div>
-        <h3 className="font-semibold text-gray-900">Mitigations</h3>
-        {risks.mitigations.map((m: any, i: number) => (
-          <div
-            key={i}
-            className="mt-2 rounded-xl bg-gray-50 p-3 ring-1 ring-gray-200"
-          >
-            <p className="font-semibold">{m.risk}</p>
-            <p>{m.strategy}</p>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function ToolsBlock({ tools }: any) {
-  return (
-    <div className="space-y-4">
-      <h3 className="font-semibold text-gray-900">{tools.category}</h3>
-
-      {tools.list.map((t: any, i: number) => (
-        <div
-          key={i}
-          className="rounded-xl bg-gray-50 p-3 ring-1 ring-gray-200"
-        >
-          <p className="font-semibold">{t.name}</p>
-          <p className="text-[13px] text-gray-700">{t.purpose}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-function SourcesBlock({ sources }: any) {
-  return (
-    <div className="space-y-6 text-[14px]">
-      <div>
-        <h3 className="font-semibold text-gray-900">Reasoning</h3>
-        <ul className="list-disc pl-4">
-          {sources.reasoning.map((r: any, i: number) => (
-            <li key={i}>{r}</li>
+      {notes && notes.length > 0 && (
+        <ul className="mt-2 list-disc pl-4 text-[12px] text-gray-600">
+          {notes.map((n, idx) => (
+            <li key={idx}>{n}</li>
           ))}
         </ul>
-      </div>
-
-      <div>
-        <h3 className="font-semibold text-gray-900">Suggested verifications</h3>
-        <ul className="list-disc pl-4">
-          {sources.suggestedVerifications.map((v: any, i: number) => (
-            <li key={i}>{v}</li>
-          ))}
-        </ul>
-      </div>
+      )}
     </div>
   );
 }
 
-function ChecklistBlock({ checklist }: any) {
+/* ---------- CHECKLIST ---------- */
+
+function ChecklistBlock({ checklist }: { checklist: string[] }) {
+  if (!checklist || checklist.length === 0) {
+    return (
+      <p className="text-sm text-gray-500">
+        No checklist items were generated for this blueprint.
+      </p>
+    );
+  }
+
   return (
     <div className="space-y-2">
-      {checklist.map((item: any, idx: number) => (
+      {checklist.map((item, idx) => (
         <label
           key={idx}
           className="flex items-center gap-3 rounded-xl bg-gray-50 p-3 text-[14px] ring-1 ring-gray-200"
@@ -986,4 +804,59 @@ function ChecklistBlock({ checklist }: any) {
       ))}
     </div>
   );
+}
+
+/* ---------- HELPERS ---------- */
+
+function buildLinearFlow(
+  nodes: string[],
+  connections: [number, number][]
+): string[] {
+  if (!nodes || nodes.length === 0) return [];
+  if (!connections || connections.length === 0) return nodes;
+
+  const outgoing = new Map<number, number>();
+  const incoming = new Set<number>();
+
+  connections.forEach(([from, to]) => {
+    if (!outgoing.has(from)) outgoing.set(from, to);
+    incoming.add(to);
+  });
+
+  let start = 0;
+  for (let i = 0; i < nodes.length; i++) {
+    if (!incoming.has(i) && outgoing.has(i)) {
+      start = i;
+      break;
+    }
+  }
+
+  const ordered: string[] = [];
+  const visited = new Set<number>();
+  let current: number | undefined = start;
+
+  while (current !== undefined && !visited.has(current)) {
+    visited.add(current);
+    ordered.push(nodes[current]);
+    current = outgoing.get(current);
+  }
+
+  // Fallback: if something went weird, just return nodes
+  return ordered.length > 0 ? ordered : nodes;
+}
+
+function iconForSection(id: string): string {
+  if (id.includes("executive")) return "✨";
+  if (id.includes("founder")) return "🧑‍💻";
+  if (id.includes("business-model")) return "📊";
+  if (id.includes("market")) return "📈";
+  if (id.includes("competition")) return "⚔️";
+  if (id.includes("icp") || id.includes("persona")) return "🎯";
+  if (id.includes("value")) return "💎";
+  if (id.includes("offer") || id.includes("pricing")) return "💰";
+  if (id.includes("financial")) return "📑";
+  if (id.includes("action")) return "✅";
+  if (id.includes("risk")) return "⚠️";
+  if (id.includes("tool")) return "🧰";
+  return "📄";
 }
