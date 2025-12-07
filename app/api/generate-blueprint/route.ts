@@ -62,6 +62,11 @@ type BlueprintScoreMetrics = {
 };
 
 type BlueprintMeta = {
+  // Short, niche-specific name for the exact business you are proposing.
+  // Example: "Residential Home Cleaning Blueprint", "Mobile Car Detailing Route Blueprint".
+  // This MUST be based on the niche you select for the user, not a generic category.
+  nicheTitle: string;
+
   modelName: string;
   difficulty: string;       // "Simple" | "Moderate" | "Complex" (or similar)
   startupCost: string;      // "Very low" | "Low" | "Medium" | "High"
@@ -191,14 +196,89 @@ CHART / TABLE / DIAGRAM FORMAT GUIDELINES:
 BLUEPRINT STRUCTURE (12 SECTION TARGET):
 You MUST produce a sections array that roughly matches these conceptual sections.
 The ids MUST be stable, lowercased, dash-separated.
-
 1. Executive Overview
    - id: "executive-overview"
-   - Snapshot of the idea, who it's for, why it fits the user.
-   - meta.modelName should reflect this section.
-   - Use 2–4 paragraphs.
-   - At least 1 simple chart or table.
-   - nextMoves: 3–7 immediate validation actions.
+   - Provide a niche-specific, strategic snapshot of the exact business you are proposing.
+   - meta.nicheTitle MUST be a polished, specific title that reflects the final niche 
+     (e.g., "Virtual CFO Subscription Practice", "Mobile Car Detailing Route Service",
+     "Digital Bookkeeping & Payroll Suite for SMBs"). It must be based strictly on 
+     userInput + decision history, never generic.
+
+   STRUCTURE REQUIREMENTS:
+   - The Executive Overview MUST contain exactly 4 paragraphs.
+   - Each paragraph MUST begin with a markdown micro-title formatted exactly like this:
+     
+     **Business Overview:**  
+     **Founder Fit & Strategic Advantage:**  
+     **Operations Snapshot:**  
+     **Market Timing & Strategic Angle:**  
+
+   - Micro-titles must be bold (markdown **text**) and end with a colon.
+   - A double space + newline MUST follow each micro-title so content begins on a new line.
+   - Each paragraph must contain 2–3 sentences, clean, skimmable, and free from fluff.
+   - Language must be simple, professional, and beginner-friendly, but with strategic depth.
+
+   PERSONALIZATION RULES:
+   - Every paragraph must reference at least ONE concrete detail from the userInput and/or decision history.
+   - Personalization should reflect:
+       - the user’s background (education, skills, personality traits),
+       - their preferred difficulty level,
+       - available budget,
+       - time constraints,
+       - risk tolerance,
+       - and goals implied by their answers.
+   - Avoid generic claims; always root logic in the user’s unique profile.
+   - Explain why THIS niche fits THIS user better than at least one adjacent niche.
+
+   CONTENT REQUIREMENTS:
+     Paragraph 1 — Business Overview:
+       - Define the business model, target niche, and the core value proposition in simple terms.
+       - Include one strategic sentence explaining WHY this niche is attractive (clear unmet need, operational simplicity, recurring revenue potential, underserved demand, etc.).
+       - Compare the niche to at least one adjacent niche and justify why this option is stronger for the user.
+
+     Paragraph 2 — Founder Fit & Strategic Advantage:
+       - Explain why the user’s background, skills, preferences, resource levels, and working style fit the niche.
+       - Include a founder-advantage sentence that states the user’s natural competitive edge (expertise, personality traits, speed, analytical strength, communication style, capital, discipline, or technical familiarity).
+
+     Paragraph 3 — Operations Snapshot:
+       - Describe how the business runs day-to-day in 2–3 sentences (workflow, tools, client interaction style, operational rhythm).
+       - Must be realistic and concrete. A beginner must clearly visualize “a day in the life.”
+       - Avoid generic wording—tie operations to what the user is likely comfortable with.
+
+     Paragraph 4 — Market Timing & Strategic Angle:
+       - Explain WHY this business model works well NOW (trend shifts, tech adoption, demand cycles, inefficiencies in current solutions).
+       - Include one “strategic wedge” sentence that reveals how the user can differentiate early.
+       - Mention 2–4 early key metrics the user should track (e.g., CAC, retention, recurring revenue, utilization rate, forecast accuracy, conversion rate).
+
+   VISUAL REQUIREMENTS:
+   - Include 1–2 visual blocks in the Executive Overview.
+   - Visuals MUST reinforce understanding of the niche—never decorative.
+   - Acceptable visual types:
+       1. Service tier breakdown table (highest priority)
+       2. Workflow or customer-journey diagram
+       3. Revenue scenario line chart (6-month conservative vs expected)
+       4. Key metrics table (CAC, retention, recurring revenue, ARPC, churn)
+       5. Time allocation pie chart (if relevant)
+
+   VISUAL FORMATTING RULES:
+   - Tables must contain 3–5 rows and 3–4 columns maximum.
+   - Charts must contain 4–6 data points with simple, realistic numbers.
+   - Diagrams must contain 4–7 nodes and 3–6 logical connections.
+   - Visuals must be clean, simple, and offer instant clarity for beginners.
+
+   VISUALS NOT ALLOWED:
+     - Full monthly P&L tables
+     - 12-month revenue models (belongs in Section 9)
+     - Overly abstract or overly complex diagrams
+     - Dense financial data blocks that overwhelm beginners
+
+   nextMoves REQUIREMENTS:
+   - List 3–7 items.
+   - Must be niche-specific and directly support validation or setup.
+   - Each item MUST start with an action verb (Define, Draft, Research, Validate, Contact, Create, Build, Test).
+   - Avoid generic suggestions like “Do market research”—instead provide specific instructions that a beginner can follow.
+   - nextMoves must reflect the user’s constraints (budget, time, skills).
+
 
 2. Founder Fit & Leverage
    - id: "founder-fit"

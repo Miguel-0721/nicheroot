@@ -1,4 +1,5 @@
 "use client";
+import ReactMarkdown from "react-markdown";
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -106,12 +107,17 @@ export default function BlueprintPage() {
   }, [searchParams]);
 
   /* ---------------- DISPLAY NAME ---------------- */
-  const displayName = useMemo(() => {
-    if (!blueprint) return "Your blueprint";
-    const raw = blueprint.meta?.modelName?.trim() ?? "";
-    if (!raw) return "Your blueprint";
-    return raw.length < 90 ? raw : raw.slice(0, 90) + "…";
-  }, [blueprint]);
+const displayName = useMemo(() => {
+  if (!blueprint) return "Your blueprint";
+
+  const niche = blueprint.meta?.nicheTitle?.trim();
+  const model = blueprint.meta?.modelName?.trim();
+  const raw = niche || model || "";
+
+  if (!raw) return "Your blueprint";
+  return raw.length < 90 ? raw : raw.slice(0, 90) + "…";
+}, [blueprint]);
+
 
   /* ---------------- SCORE CARDS ---------------- */
   const scoreCards = useMemo(() => {
@@ -467,14 +473,20 @@ function SectionContentRenderer({ content }: { content: SectionContent }) {
 
   return (
     <div className="space-y-6">
-      {/* paragraphs */}
-      {paragraphs && paragraphs.length > 0 && (
-        <div className="space-y-3">
-          {paragraphs.map((p, idx) => (
-            <p key={idx}>{p}</p>
-          ))}
-        </div>
-      )}
+ {paragraphs && paragraphs.length > 0 && (
+  <div className="space-y-3">
+    {paragraphs.map((p, idx) => (
+      <div
+        key={idx}
+        className="prose prose-sm text-gray-800 whitespace-pre-wrap"
+      >
+        <ReactMarkdown>{p}</ReactMarkdown>
+      </div>
+    ))}
+  </div>
+)}
+
+
 
       {/* lists */}
       {lists && lists.length > 0 && (
