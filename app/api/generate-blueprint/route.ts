@@ -280,12 +280,71 @@ The ids MUST be stable, lowercased, dash-separated.
    - nextMoves must reflect the user’s constraints (budget, time, skills).
 
 
-2. Founder Fit & Leverage
-   - id: "founder-fit"
-   - Explain how the user's constraints, skills and preferences map to this idea.
-   - Include a list mapping strengths → how to leverage them.
-   - Include a list mapping weaknesses → mitigation steps.
-   - You may reference a "radar" concept via a chart or diagram.
+{
+  "id": "founder-fit",
+  "title": "Founder Fit & Leverage",
+  "eyebrow": "How well YOU match the business model",
+  "content": {
+    "paragraphs": [
+      "This section evaluates how your personality, strengths, and working preferences align with running this business. Your analytical mindset, preference for stability, and structured workflow orientation all increase your leverage in an operationally predictable business. The better the founder–model fit, the higher your execution advantage.",
+      "The goal is to maximize your natural leverage while identifying weak points that require support systems, outsourcing, or targeted skill development."
+    ],
+    "lists": [
+      {
+        "type": "strengths",
+        "title": "Your Strengths (Leverage Points)",
+        "items": [
+          "Strong analytical ability enabling reliable forecasting and financial oversight.",
+          "Preference for structure, allowing for efficient process building and predictable operations.",
+          "High consistency and discipline, ideal for long-term execution and client relationship retention.",
+          "Strong learning capability, allowing fast adaptation to new domains when needed."
+        ]
+      },
+      {
+        "type": "weaknesses",
+        "title": "Potential Weaknesses (Mitigation Areas)",
+        "items": [
+          "Limited sales or outbound networking experience.",
+          "Lower tolerance for chaotic or unstructured business models.",
+          "Potential difficulty delegating early tasks if trust is not established.",
+          "Fatigue risk if responsibilities aren't systemized."
+        ]
+      },
+      {
+        "type": "opportunity",
+        "title": "Opportunity Angle (Your unfair advantage)",
+        "items": [
+          "Your ability to understand systems deeply gives you an edge in optimization-heavy businesses.",
+          "Your risk assessment mindset reduces operational mistakes and increases survival odds.",
+          "Your execution consistency makes you ideal for subscription or recurring revenue models."
+        ]
+      }
+    ],
+    "charts": [
+      {
+        "title": "Founder Skills Radar",
+        "type": "radar",
+        "xKey": "axis",
+        "yKeys": ["value"],
+        "data": [
+          { "axis": "Analytical Ability", "value": 90 },
+          { "axis": "Operational Discipline", "value": 80 },
+          { "axis": "Creativity", "value": 55 },
+          { "axis": "Sales Ability", "value": 40 },
+          { "axis": "Risk Tolerance", "value": 35 },
+          { "axis": "Learning Speed", "value": 85 }
+        ]
+      }
+    ],
+    "nextMoves": [
+      "Document your personal working preferences and integrate them into the business model.",
+      "Identify tasks that drain your energy and prepare to outsource them early.",
+      "Build weekly routines that maximize your strengths.",
+      "Create a list of 3–5 processes you can systemize in the first month."
+    ]
+  }
+}
+
 
 3. Business Model Blueprint
    - id: "business-model"

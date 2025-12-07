@@ -73,6 +73,8 @@ export default function BlueprintPage() {
         const found = valid.find((b) => b.id === idFromUrl);
         if (found) {
           setBlueprint(found.data);
+          (window as any).__blueprint = found.data;
+
           setCurrentId(found.id);
           if (found.data.sections?.length > 0) {
             setActiveTab(found.data.sections[0].id);
@@ -170,6 +172,9 @@ const displayName = useMemo(() => {
     if (!found) return;
     setCurrentId(id);
     setBlueprint(found.data);
+(window as any).__blueprint = found.data;
+
+
     if (found.data.sections?.length > 0) {
       setActiveTab(found.data.sections[0].id);
     } else {
@@ -223,6 +228,10 @@ const displayName = useMemo(() => {
   /* =====================================================================
      PAGE
   ===================================================================== */
+  if (blueprint) {
+  (window as any).__blueprint = blueprint;
+}
+  
   return (
     <main className="min-h-screen bg-[var(--background)] py-16 px-4 md:px-6 text-gray-900">
       <div className="mx-auto max-w-6xl space-y-10">
@@ -457,62 +466,92 @@ function NextMovesBlock({ items }: { items?: string[] }) {
   );
 }
 
-/* ---------- CONTENT RENDERER FOR SECTIONS ---------- */
-
+/* ---------- SECTION CONTENT RENDERER (CLEAN + STABLE) ---------- */
 function SectionContentRenderer({ content }: { content: SectionContent }) {
   const {
-    paragraphs,
-    lists,
-    tables,
-    charts,
-    diagrams,
-    images,
-    examples,
-    nextMoves,
+    paragraphs = [],
+    lists = [],
+    tables = [],
+    charts = [],
+    diagrams = [],
+    images = [],
+    examples = [],
+    nextMoves = [],
   } = content;
 
   return (
     <div className="space-y-6">
- {paragraphs && paragraphs.length > 0 && (
-  <div className="space-y-3">
-    {paragraphs.map((p, idx) => (
-      <div
-        key={idx}
-        className="prose prose-sm text-gray-800 whitespace-pre-wrap"
-      >
-        <ReactMarkdown>{p}</ReactMarkdown>
-      </div>
-    ))}
-  </div>
-)}
 
-
-
-      {/* lists */}
-      {lists && lists.length > 0 && (
-        <div className="grid gap-4 md:grid-cols-2">
-          {lists.map((block, idx) => (
+      {/* ---------- PARAGRAPHS ---------- */}
+      {paragraphs.length > 0 && (
+        <div className="space-y-3">
+          {paragraphs.map((p, idx) => (
             <div
               key={idx}
-              className="rounded-xl bg-gray-50 p-4 text-[13px] ring-1 ring-gray-200"
+              className="prose prose-sm text-gray-800 whitespace-pre-wrap"
             >
-              {block.title && (
-                <h3 className="mb-2 text-[13px] font-semibold text-gray-900">
-                  {block.title}
-                </h3>
-              )}
-              <ul className="list-disc pl-4 space-y-1">
-                {block.items.map((item, i) => (
-                  <li key={i}>{item}</li>
-                ))}
-              </ul>
+              <ReactMarkdown>{p}</ReactMarkdown>
             </div>
           ))}
         </div>
       )}
 
-      {/* tables */}
-      {tables && tables.length > 0 && (
+      {/* ---------- LIST BLOCKS (Strengths, Weaknesses, Opportunity) ---------- */}
+      {lists.length > 0 && (
+        <div className="space-y-4">
+
+          {/* Row 1: Strengths + Weaknesses */}
+          <div className="grid gap-4 md:grid-cols-2">
+            {lists
+              .filter(
+                (l) =>
+                  l.type === "strengths" ||
+                  l.type === "weaknesses" ||
+                  !l.type // backwards compatibility
+              )
+              .map((block, idx) => (
+                <div
+                  key={idx}
+                  className="rounded-2xl bg-gray-50 p-5 shadow-sm ring-1 ring-gray-200"
+                >
+                  <h3 className="mb-3 text-[14px] font-semibold text-gray-900">
+                    {block.title}
+                  </h3>
+
+                  <ul className="list-disc pl-5 space-y-1.5 text-[13px]">
+                    {block.items.map((item, i) => (
+                      <li key={i}>{item}</li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+          </div>
+
+          {/* Row 2: Opportunity → Full width purple */}
+          {lists.some((l) => l.type === "opportunity") && (
+            <div className="rounded-2xl bg-indigo-50 p-5 shadow-sm ring-1 ring-indigo-200">
+              {lists
+                .filter((l) => l.type === "opportunity")
+                .map((block, idx) => (
+                  <div key={idx}>
+                    <h3 className="mb-3 text-[14px] font-semibold text-indigo-900">
+                      {block.title}
+                    </h3>
+
+                    <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-indigo-900/90">
+                      {block.items.map((item, i) => (
+                        <li key={i}>{item}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ---------- TABLES ---------- */}
+      {tables.length > 0 && (
         <div className="space-y-4">
           {tables.map((table, idx) => (
             <div
@@ -551,8 +590,8 @@ function SectionContentRenderer({ content }: { content: SectionContent }) {
         </div>
       )}
 
-      {/* charts */}
-      {charts && charts.length > 0 && (
+      {/* ---------- CHARTS ---------- */}
+      {charts.length > 0 && (
         <div className="grid gap-6 md:grid-cols-2">
           {charts.map((chart, idx) => (
             <ChartBlockRenderer key={idx} chart={chart} />
@@ -560,17 +599,17 @@ function SectionContentRenderer({ content }: { content: SectionContent }) {
         </div>
       )}
 
-      {/* diagrams */}
-      {diagrams && diagrams.length > 0 && (
+      {/* ---------- DIAGRAMS ---------- */}
+      {diagrams.length > 0 && (
         <div className="space-y-4">
-          {diagrams.map((diagram, idx) => (
-            <DiagramBlockRenderer key={idx} diagram={diagram} />
+          {diagrams.map((d, idx) => (
+            <DiagramBlockRenderer key={idx} diagram={d} />
           ))}
         </div>
       )}
 
-      {/* images */}
-      {images && images.length > 0 && (
+      {/* ---------- IMAGES ---------- */}
+      {images.length > 0 && (
         <div className="grid gap-4 md:grid-cols-2">
           {images.map((img, idx) => (
             <figure
@@ -595,8 +634,8 @@ function SectionContentRenderer({ content }: { content: SectionContent }) {
         </div>
       )}
 
-      {/* examples */}
-      {examples && examples.length > 0 && (
+      {/* ---------- EXAMPLES ---------- */}
+      {examples.length > 0 && (
         <div className="space-y-3">
           {examples.map((ex, idx) => (
             <div
@@ -618,11 +657,12 @@ function SectionContentRenderer({ content }: { content: SectionContent }) {
         </div>
       )}
 
-      {/* next moves */}
+      {/* ---------- NEXT MOVES ---------- */}
       <NextMovesBlock items={nextMoves} />
     </div>
   );
 }
+
 
 /* ---------- CHART RENDERER (FINAL FIXED VERSION) ---------- */
 function ChartBlockRenderer({ chart }: { chart: ChartBlock }) {
@@ -723,17 +763,44 @@ function ChartBlockRenderer({ chart }: { chart: ChartBlock }) {
               />
             </PieChart>
           ) : type === "radar" ? (
-            <RadarChart data={data}>
-              <PolarGrid />
-              <PolarAngleAxis dataKey={safeXKey} />
-              <PolarRadiusAxis angle={30} domain={[0, 100]} />
-              <Radar
-                dataKey={safeYKeys[0]}
-                fill={palette[0]}
-                stroke={palette[0]}
-                fillOpacity={0.4}
-              />
-            </RadarChart>
+<RadarChart
+  data={data}
+  cx="50%"
+  cy="50%"
+  outerRadius="68%"   // slightly bigger, still safe
+  margin={{ top: 20, right: 90, bottom: 20, left: 20 }}
+>
+  <PolarGrid stroke="#E5E7EB" />
+
+  <PolarAngleAxis
+    dataKey={safeXKey}
+    tick={{
+      fontSize: 12,
+      fill: "#4B5563",
+      width: 80,        // keeps same text behavior
+    }}
+  />
+
+  <PolarRadiusAxis
+    angle={90}
+    domain={[0, 100]}
+    tick={false}
+    stroke="#E5E7EB"
+  />
+
+  <Radar
+    dataKey={safeYKeys[0]}
+    fill={palette[0]}
+    stroke={palette[0]}
+    fillOpacity={0.45}
+  />
+</RadarChart>
+
+
+
+
+
+
           ) : type === "funnel" ? (
             <BarChart data={data} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" />

@@ -97,6 +97,7 @@ export type ImageBlock = {
  * A simple titled list of bullet items.
  */
 export type ListBlock = {
+  type?: "strengths" | "weaknesses" | "opportunity" | string;
   title?: string;
   items: string[];
 };
