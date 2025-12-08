@@ -9,34 +9,85 @@ const client = new OpenAI({
 });
 
 // Safely extract first JSON object from a text blob
+// Extract the FIRST valid and COMPLETE JSON object from a model response
 function extractFirstJson(text: string): any {
-  const match = text.match(/\{[\s\S]*\}/);
-  if (!match) {
-    throw new Error("No JSON object found in response.");
-  }
-  return JSON.parse(match[0]);
-}
-
-// Handle different possible shapes from the Responses API
-function safeGetText(response: any): string {
-  if (response.output_text) {
-    return response.output_text;
+  // Find the first '{' which should be the start of the JSON
+  const start = text.indexOf("{");
+  if (start === -1) {
+    throw new Error("No JSON start found in model response.");
   }
 
-  if (response.output?.length > 0) {
-    const first = response.output[0];
-    if (first.content?.length > 0 && first.content[0].text) {
-      return first.content[0].text;
+  // Try progressively shorter slices from the end to find a valid JSON block
+  for (let end = text.length; end > start; end--) {
+    const slice = text.slice(start, end);
+
+    try {
+      return JSON.parse(slice); // If this succeeds, we’re done
+    } catch {
+      // Ignore and keep trying with a shorter slice
     }
   }
 
-  if (response.choices?.length > 0) {
-    const msg = response.choices[0].message;
-    if (msg?.content) return msg.content as string;
+  // If direct slicing didn’t work, try to auto-fix common truncation issues
+
+  // Count opening and closing braces
+  let openBraces = 0;
+  let closeBraces = 0;
+
+  for (const ch of text) {
+    if (ch === "{") openBraces++;
+    if (ch === "}") closeBraces++;
   }
 
-  return JSON.stringify(response, null, 2);
+  // If we have more opens than closes, append missing closing braces
+  let fixed = text.slice(start);
+  let missing = openBraces - closeBraces;
+
+  while (missing > 0) {
+    fixed += "}";
+    missing--;
+  }
+
+  try {
+    return JSON.parse(fixed);
+  } catch (err: any) {
+    throw new Error("JSON could not be recovered from model response: " + String(err));
+  }
 }
+
+
+// Safely extract the text response from the OpenAI Responses API
+function safeGetText(response: any): string {
+  // NEW Responses API
+  if (typeof response.output_text === "string" && response.output_text.trim().length > 0) {
+    return response.output_text.trim();
+  }
+
+  // Fallback: check response.output array
+  if (Array.isArray(response.output) && response.output.length > 0) {
+    const first = response.output[0];
+
+    // Check for new format: content[{type:"output_text", text:"..."}]
+    if (first?.content && Array.isArray(first.content)) {
+      const textBlock = first.content.find((c: any) => c.text);
+      if (textBlock?.text) return textBlock.text.trim();
+    }
+
+    // Legacy fallback
+    if (first?.content?.[0]?.text) {
+      return first.content[0].text.trim();
+    }
+  }
+
+  // Defensive fallback
+  if (typeof response === "string") return response.trim();
+  try {
+    return JSON.stringify(response);
+  } catch {
+    return "";
+  }
+}
+
 
 export async function POST(req: Request) {
   try {
@@ -152,84 +203,80 @@ type BusinessBlueprint = {
   globalChecklist: string[];
 };
 
-GLOBAL RULES (STRICT MODE):
-- Audience: beginner entrepreneur with little business experience.
-- Use simple language, but detailed explanations. Do not assume they know jargon.
-- You MUST return ONLY a raw JSON object of type BusinessBlueprint.
-  - No markdown.
-  - No backticks.
-  - No comments.
-  - No prose before or after the JSON.
-- All required fields must be present and non-null.
-- All scores in BlueprintScoreMetrics are INTEGERS between 0 and 100.
-  - Avoid extremes unless strongly justified.
-  - Most scores should fall between 40 and 85 and be consistent with your reasoning.
-- Where arrays are present (paragraphs, lists, tables, charts, diagrams, examples, nextMoves, globalChecklist), they must NOT be empty. If a block exists, fill it meaningfully.
-- Every section MUST have at least:
-  - 1 paragraph in content.paragraphs
-  - 1–2 lists OR 1 table OR 1 chart OR 1 diagram (or a mix)
-  - 3–7 items in content.nextMoves
-- globalChecklist MUST contain 15–20 highly concrete to-do items.
+CHART / TABLE / DIAGRAM FORMAT RULES (STRICT & UPDATED):
 
-SEMANTIC RULES:
-- Everything must be internally consistent: if demand is high, the market section should reflect that, etc.
-- Keep the tone encouraging but realistic. No hype, no “get rich quick”.
-- Always explain WHAT to do and HOW to do it (step-by-step) for beginners.
-- Prefer concrete examples: instead of "do market research", say "Search Reddit for 'problem X' and note 10 recurring complaints."
-CHART / TABLE / DIAGRAM FORMAT RULES (STRICT):
-
+-------------------------------------------------------------
 CHART RULES:
 - Every ChartBlock MUST include an "explanation" field (1–3 sentences).
 - Explanation MUST interpret the visual: what the trend means AND why it matters.
-- Never restate the numbers—extract the insight.
+- NEVER restate the numbers—extract the insight.
 - Use beginner-friendly language.
+- Each explanation MUST include:
+  A) What the numbers show (trend, strongest/weakest, comparison)
+  B) Why this matters strategically
+  C) One practical takeaway for the user
 
 CHART DATA FORMATS:
 - Line chart:
     xKey: "month"
     yKeys: ["revenue","expenses"] or similar
     data example: [{ "month": "Month 1", "revenue": 0, "expenses": 150 }]
+
 - Pie chart:
     data: [{ "category": "Tools", "percent": 30 }]
+
 - Bar chart:
     xKey: "segment"
     yKeys: ["score"]
     data: [{ "segment": "SMBs", "score": 78 }]
+
 - Radar chart:
     data: [{ "axis": "Skill Name", "value": 80 }]
+
 - Funnel chart:
     data: [{ "stage": "Visitors", "count": 1000 }]
 
-CHART EXPLANATION REQUIREMENTS:
-- MUST describe what the chart visually shows (trend, comparison, strongest/weakest element).
-- MUST explain why that matters for strategic decision-making.
-- Example tone:
-  "This trend shows expenses stabilize by Month 4 while revenue grows faster, indicating a path to early breakeven."
+CHART EXPLANATION TEMPLATE (AI MUST FOLLOW):
+- Sentence 1: Interpret the pattern (trend, gap, ranking).
+- Sentence 2: Explain strategic meaning.
+- Sentence 3: Give one actionable takeaway.
 
 -------------------------------------------------------------
-
 TABLE RULES:
 - Every TableBlock MUST include an "explanation" field (1–3 sentences).
-- Explanation MUST interpret the table: what insight the user gains.
-- Do NOT restate table content.
-- Use simple language.
-- Example tone:
-  "The Standard tier offers the best balance of price and workload, making it ideal for early customer acquisition."
+- Explanation MUST interpret the table:
+  • What insight the user should take away  
+  • What pattern or contrast matters  
+  • How it affects decision-making  
+- NEVER restate table cells.
+
+TABLE EXPLANATION TEMPLATE:
+- Sentence 1: Identify the key pattern (best option, biggest risk, largest segment, etc).
+- Sentence 2: Explain why this matters for the business model.
+- Sentence 3: Practical recommendation.
 
 -------------------------------------------------------------
-
 DIAGRAM RULES:
 - Every DiagramBlock MUST include an "explanation" field (1–3 sentences).
-- Explanation MUST translate the diagram into plain English:
-  * what the flow represents,
-  * why those steps matter,
-  * where the leverage point is.
+- Explanation MUST translate the diagram into simple English:
+  • What the flow represents  
+  • Why the sequence matters  
+  • Where the leverage point or bottleneck lies  
 - Diagrams MUST include:
     nodes: ["Step 1", "Step 2", ...]
     connections: [[0,1],[1,2],...]
-- Example tone:
-  "This customer journey highlights that awareness → consideration is your biggest drop-off, so improving early messaging has the highest impact."
 
+DIAGRAM EXPLANATION TEMPLATE:
+- Sentence 1: Describe what the flow shows.
+- Sentence 2: Explain strategic meaning.
+- Sentence 3: Highlight leverage or improvement point.
+
+-------------------------------------------------------------
+INSIGHT ENGINE RULES (APPLIES TO ALL VISUALS):
+- Interpret, don’t restate numbers.
+- Explain WHY the numbers or flow matter.
+- Give one clear actionable insight.
+- Use simple, beginner-friendly language.
 -------------------------------------------------------------
 
 
@@ -321,70 +368,35 @@ The ids MUST be stable, lowercased, dash-separated.
    - nextMoves must reflect the user’s constraints (budget, time, skills).
 
 
-{
-  "id": "founder-fit",
-  "title": "Founder Fit & Leverage",
-  "eyebrow": "How well YOU match the business model",
-  "content": {
-    "paragraphs": [
-      "This section evaluates how your personality, strengths, and working preferences align with running this business. Your analytical mindset, preference for stability, and structured workflow orientation all increase your leverage in an operationally predictable business. The better the founder–model fit, the higher your execution advantage.",
-      "The goal is to maximize your natural leverage while identifying weak points that require support systems, outsourcing, or targeted skill development."
-    ],
-    "lists": [
-      {
-        "type": "strengths",
-        "title": "Your Strengths (Leverage Points)",
-        "items": [
-          "Strong analytical ability enabling reliable forecasting and financial oversight.",
-          "Preference for structure, allowing for efficient process building and predictable operations.",
-          "High consistency and discipline, ideal for long-term execution and client relationship retention.",
-          "Strong learning capability, allowing fast adaptation to new domains when needed."
-        ]
-      },
-      {
-        "type": "weaknesses",
-        "title": "Potential Weaknesses (Mitigation Areas)",
-        "items": [
-          "Limited sales or outbound networking experience.",
-          "Lower tolerance for chaotic or unstructured business models.",
-          "Potential difficulty delegating early tasks if trust is not established.",
-          "Fatigue risk if responsibilities aren't systemized."
-        ]
-      },
-      {
-        "type": "opportunity",
-        "title": "Opportunity Angle (Your unfair advantage)",
-        "items": [
-          "Your ability to understand systems deeply gives you an edge in optimization-heavy businesses.",
-          "Your risk assessment mindset reduces operational mistakes and increases survival odds.",
-          "Your execution consistency makes you ideal for subscription or recurring revenue models."
-        ]
-      }
-    ],
-    "charts": [
-      {
-        "title": "Founder Skills Radar",
-        "type": "radar",
-        "xKey": "axis",
-        "yKeys": ["value"],
-        "data": [
-          { "axis": "Analytical Ability", "value": 90 },
-          { "axis": "Operational Discipline", "value": 80 },
-          { "axis": "Creativity", "value": 55 },
-          { "axis": "Sales Ability", "value": 40 },
-          { "axis": "Risk Tolerance", "value": 35 },
-          { "axis": "Learning Speed", "value": 85 }
-        ]
-      }
-    ],
-    "nextMoves": [
-      "Document your personal working preferences and integrate them into the business model.",
-      "Identify tasks that drain your energy and prepare to outsource them early.",
-      "Build weekly routines that maximize your strengths.",
-      "Create a list of 3–5 processes you can systemize in the first month."
-    ]
-  }
-}
+2. Founder Fit & Leverage
+   - id: "founder-fit"
+   - Purpose: show how well the user matches the chosen business model.
+   - This section must analyze:
+       • personality traits  
+       • working style  
+       • strengths and weaknesses  
+       • natural leverage points  
+       • risk tolerance  
+       • skills that give an advantage or disadvantage  
+   - MUST explain WHY the user is a good (or imperfect) fit for this business.
+
+   CONTENT REQUIREMENTS:
+   - 2–3 paragraphs (simple, clear sentences).
+   - MUST mention at least one detail from userInput or decision history.
+   - Include:
+       • One strengths list (4–6 items)
+       • One weaknesses list (3–5 items)
+       • One opportunity/advantage list (3–5 items)
+   - Include ONE visual:
+       • Preferably a radar chart showing relative strengths.
+       • Or a value-chain or bar chart if more relevant.
+   - Each chart MUST include a proper "explanation" following the strict explanation rules.
+   - nextMoves:
+       • 3–6 items
+       • Each must start with an action verb
+       • Must be specific to the user’s traits and constraints
+       • Should tell the user how to build on strengths and reduce weaknesses
+
 
 
 3. Business Model Blueprint
@@ -492,7 +504,16 @@ ${userInput}
 Decision history from the 6-question flow:
 ${JSON.stringify(history, null, 2)}
 
-Using this information, generate a complete BusinessBlueprint JSON object that follows the schema and rules from the system prompt EXACTLY.
+Using this information, generate ONLY a complete BusinessBlueprint JSON object.
+
+STRICT JSON OUTPUT RULE:
+- Your final answer must be ONE valid JSON object.
+- No markdown, no explanations, no comments, no trailing commas.
+- Never include text outside of the JSON.
+- Ensure all arrays and objects are properly closed.
+- Follow the schema EXACTLY.
+- If unsure between two formats, choose the simpler JSON structure.
+
 `;
 
     const response = await client.responses.create({
