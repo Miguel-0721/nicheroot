@@ -550,45 +550,64 @@ function SectionContentRenderer({ content }: { content: SectionContent }) {
         </div>
       )}
 
-      {/* ---------- TABLES ---------- */}
-      {tables.length > 0 && (
-        <div className="space-y-4">
-          {tables.map((table, idx) => (
-            <div
-              key={idx}
-              className="overflow-x-auto rounded-xl bg-gray-50 p-3 text-[12px] ring-1 ring-gray-200"
-            >
-              {table.title && (
-                <p className="mb-2 text-[11px] font-semibold uppercase text-gray-600">
-                  {table.title}
-                </p>
-              )}
-              <table className="min-w-full border-separate border-spacing-y-1">
-                <thead className="text-[11px] text-gray-500">
-                  <tr>
-                    {table.columns.map((col, i) => (
-                      <th key={i} className="px-2 py-1 text-left">
-                        {col}
-                      </th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {table.rows.map((row, rIdx) => (
-                    <tr key={rIdx} className="bg-white/70">
-                      {row.map((cell, cIdx) => (
-                        <td key={cIdx} className="px-2 py-2">
-                          {cell}
-                        </td>
-                      ))}
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ))}
-        </div>
-      )}
+     {/* ---------- TABLES ---------- */}
+{tables.length > 0 && (
+  <div className="space-y-4">
+    {tables.map((table, idx) => (
+      <div
+        key={idx}
+        className="overflow-x-auto rounded-xl bg-gray-50 p-4 text-[12px] ring-1 ring-gray-200 space-y-3"
+      >
+        {/* Title */}
+        {table.title && (
+          <p className="text-[12px] font-semibold uppercase text-gray-700">
+            {table.title}
+          </p>
+        )}
+
+        {/* Table */}
+        <table className="min-w-full border-separate border-spacing-y-1">
+          <thead className="text-[11px] text-gray-500">
+            <tr>
+              {table.columns.map((col, i) => (
+                <th key={i} className="px-2 py-1 text-left">
+                  {col}
+                </th>
+              ))}
+            </tr>
+          </thead>
+
+          <tbody>
+            {table.rows.map((row, rIdx) => (
+              <tr key={rIdx} className="bg-white/70">
+                {row.map((cell, cIdx) => (
+                  <td key={cIdx} className="px-2 py-2">
+                    {cell}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+       {/* Explanation OUTSIDE the table box */}
+{table.explanation && (
+  <div className="mt-3 ml-1">
+    <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
+      Insight
+    </p>
+    <p className="text-[13px] text-gray-700 leading-relaxed">
+      {table.explanation}
+    </p>
+  </div>
+)}
+
+      </div>
+    ))}
+  </div>
+)}
+
+
 
       {/* ---------- CHARTS ---------- */}
       {charts.length > 0 && (
@@ -834,17 +853,31 @@ function ChartBlockRenderer({ chart }: { chart: ChartBlock }) {
         </ResponsiveContainer>
       </div>
 
-      {note && (
-        <p className="mt-2 text-[11px] text-gray-500">{note}</p>
-      )}
-    </div>
-  );
+
+{/* Insight below chart */}
+{chart.explanation && (
+  <div className="mt-3 ml-1">
+    <p className="text-[11px] font-semibold uppercase text-gray-500 tracking-wide">
+      Insight
+    </p>
+    <p className="text-[13px] leading-relaxed text-gray-700">
+      {chart.explanation}
+    </p>
+  </div>
+)}
+
+{note && (
+  <p className="mt-2 text-[11px] text-gray-500">{note}</p>
+)}
+</div>
+);
+
 }
 
 /* ---------- DIAGRAM RENDERER ---------- */
 
 function DiagramBlockRenderer({ diagram }: { diagram: DiagramBlock }) {
-  const { title, type, nodes, connections, notes } = diagram;
+  const { title, type, nodes, connections, notes, explanation } = diagram;
 
   // Build a simple linear flow if connections are present
   const orderedNodes =
@@ -861,13 +894,17 @@ function DiagramBlockRenderer({ diagram }: { diagram: DiagramBlock }) {
       ? "bg-amber-50 text-amber-800 ring-amber-100"
       : "bg-gray-50 text-gray-800 ring-gray-200";
 
-  return (
+ return (
+  <>
     <div className="space-y-3 rounded-xl bg-white p-4 ring-1 ring-gray-200">
+      {/* Title */}
       {title && (
         <p className="text-[12px] font-semibold uppercase text-gray-700">
           {title}
         </p>
       )}
+
+      {/* Node Flow */}
       <div className="flex flex-wrap items-center gap-2 text-[13px]">
         {orderedNodes.map((node, idx) => (
           <div key={idx} className="flex items-center gap-2">
@@ -882,6 +919,8 @@ function DiagramBlockRenderer({ diagram }: { diagram: DiagramBlock }) {
           </div>
         ))}
       </div>
+
+      {/* Notes */}
       {notes && notes.length > 0 && (
         <ul className="mt-2 list-disc pl-4 text-[12px] text-gray-600">
           {notes.map((n, idx) => (
@@ -890,10 +929,26 @@ function DiagramBlockRenderer({ diagram }: { diagram: DiagramBlock }) {
         </ul>
       )}
     </div>
-  );
+
+    {/* Insight BELOW the card */}
+    {explanation && (
+      <div className="mt-3 ml-1">
+        <p className="text-[11px] font-semibold uppercase text-gray-500 tracking-wide">
+          Insight
+        </p>
+        <p className="text-[13px] leading-relaxed text-gray-700">
+          {explanation}
+        </p>
+      </div>
+    )}
+  </>
+);
 }
 
+
+
 /* ---------- CHECKLIST ---------- */
+
 
 function ChecklistBlock({ checklist }: { checklist: string[] }) {
   if (!checklist || checklist.length === 0) {

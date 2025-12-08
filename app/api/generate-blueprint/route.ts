@@ -83,7 +83,9 @@ type ChartBlock = {
   yKeys?: string[];
   data: any[];
   note?: string;
+  explanation: string;
 };
+
 
 type DiagramType =
   | "flow"
@@ -98,6 +100,7 @@ type DiagramBlock = {
   nodes: string[];
   connections: [number, number][];
   notes?: string[];
+  explanation: string;
 };
 
 type ImageBlock = {
@@ -115,7 +118,10 @@ type TableBlock = {
   title?: string;
   columns: string[];
   rows: string[][];
+  explanation: string;  // REQUIRED: short interpretation of the table
 };
+
+
 
 type ExampleBlock = {
   title?: string;
@@ -170,28 +176,63 @@ SEMANTIC RULES:
 - Keep the tone encouraging but realistic. No hype, no “get rich quick”.
 - Always explain WHAT to do and HOW to do it (step-by-step) for beginners.
 - Prefer concrete examples: instead of "do market research", say "Search Reddit for 'problem X' and note 10 recurring complaints."
+CHART / TABLE / DIAGRAM FORMAT RULES (STRICT):
 
-CHART / TABLE / DIAGRAM FORMAT GUIDELINES:
-- For a "line" chart (e.g. revenue vs expenses over months):
-  - xKey: "month"
-  - yKeys: ["revenue", "expenses"] (or similar)
-  - data: [{ "month": "Month 1", "revenue": 0, "expenses": 150 }, ...]
-- For a "pie" chart (e.g. cost breakdown):
-  - No xKey/yKeys needed.
-  - data: [{ "category": "Tools", "percent": 30 }, ...]
-- For a "bar" chart (e.g. segment opportunities):
-  - xKey: "segment"
-  - yKeys: ["score"]
-  - data: [{ "segment": "SMBs", "score": 78 }, ...]
-- For "funnel" chart:
-  - xKey: "stage"
-  - yKeys: ["count"]
-  - data: [{ "stage": "Visitors", "count": 1000 }, ...]
-- Diagrams MUST:
-  - Have nodes: labelled steps or concepts.
-  - connections: index pairs referencing nodes array, e.g. [0,1], [1,2].
-  - Example: nodes ["Awareness", "Interest", "Trial", "Customer"],
-    connections [[0,1],[1,2],[2,3]].
+CHART RULES:
+- Every ChartBlock MUST include an "explanation" field (1–3 sentences).
+- Explanation MUST interpret the visual: what the trend means AND why it matters.
+- Never restate the numbers—extract the insight.
+- Use beginner-friendly language.
+
+CHART DATA FORMATS:
+- Line chart:
+    xKey: "month"
+    yKeys: ["revenue","expenses"] or similar
+    data example: [{ "month": "Month 1", "revenue": 0, "expenses": 150 }]
+- Pie chart:
+    data: [{ "category": "Tools", "percent": 30 }]
+- Bar chart:
+    xKey: "segment"
+    yKeys: ["score"]
+    data: [{ "segment": "SMBs", "score": 78 }]
+- Radar chart:
+    data: [{ "axis": "Skill Name", "value": 80 }]
+- Funnel chart:
+    data: [{ "stage": "Visitors", "count": 1000 }]
+
+CHART EXPLANATION REQUIREMENTS:
+- MUST describe what the chart visually shows (trend, comparison, strongest/weakest element).
+- MUST explain why that matters for strategic decision-making.
+- Example tone:
+  "This trend shows expenses stabilize by Month 4 while revenue grows faster, indicating a path to early breakeven."
+
+-------------------------------------------------------------
+
+TABLE RULES:
+- Every TableBlock MUST include an "explanation" field (1–3 sentences).
+- Explanation MUST interpret the table: what insight the user gains.
+- Do NOT restate table content.
+- Use simple language.
+- Example tone:
+  "The Standard tier offers the best balance of price and workload, making it ideal for early customer acquisition."
+
+-------------------------------------------------------------
+
+DIAGRAM RULES:
+- Every DiagramBlock MUST include an "explanation" field (1–3 sentences).
+- Explanation MUST translate the diagram into plain English:
+  * what the flow represents,
+  * why those steps matter,
+  * where the leverage point is.
+- Diagrams MUST include:
+    nodes: ["Step 1", "Step 2", ...]
+    connections: [[0,1],[1,2],...]
+- Example tone:
+  "This customer journey highlights that awareness → consideration is your biggest drop-off, so improving early messaging has the highest impact."
+
+-------------------------------------------------------------
+
+
 
 BLUEPRINT STRUCTURE (12 SECTION TARGET):
 You MUST produce a sections array that roughly matches these conceptual sections.
@@ -348,9 +389,25 @@ The ids MUST be stable, lowercased, dash-separated.
 
 3. Business Model Blueprint
    - id: "business-model"
-   - Explain how value is created, delivered and captured.
-   - Include a value-chain style diagram (type: "value-chain").
-   - Include at least 1 table resembling a mini lean canvas (problems, solutions, channels, revenue).
+   - Provide a niche-specific, operational explanation of how value is created, delivered, and captured.
+   - USE THE USER’S PROFILE AND CONSTRAINTS when describing the business mechanics.
+   - The intro paragraphs MUST:
+       • Explain why this model fits the user’s skills, risk tolerance, and resource levels  
+       • Include at least 1 specific example of how the user would perform the work  
+       • Include 1 sentence comparing this model to a nearby alternative
+   - Include a “value-chain” style diagram (type: "value-chain") with 5–7 nodes showing the service lifecycle.
+   - Include at least ONE lean-mini-canvas table:
+       columns: ["Component", "Description"]
+       rows: Problem, Solution, Channels, Revenue, Costs, Key Metrics
+       Descriptions must be niche-specific and actionable.
+   - Include ONE visual chart:
+       • Prefer a “revenue scenario” chart with 2 lines: Conservative vs Expected
+       • OR a bar chart with realistic month-by-month projections
+   - nextMoves:
+       • Must contain 5–7 steps
+       • Must be highly actionable
+       • Must include both validation and setup actions
+       • MUST reference the user’s constraints (time, money, risk tolerance)
 
 4. Market & Demand
    - id: "market-demand"

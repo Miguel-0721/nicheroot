@@ -48,15 +48,13 @@ export type ChartType =
 export type ChartBlock = {
   title?: string;
   type: ChartType;
-  /** Name of the key used for the X axis (e.g. "month", "year", "stage"). */
   xKey?: string;
-  /** Keys used for Y values (e.g. ["revenue", "expenses"]). */
   yKeys?: string[];
-  /** Raw data array; structure depends on chart type and keys. */
   data: any[];
-  /** Optional explanatory text shown near the chart. */
   note?: string;
+  explanation?: string; // NEW FIELD
 };
+
 
 /**
  * Diagram types describe conceptual flows rather than numeric charts.
@@ -79,8 +77,8 @@ export type DiagramBlock = {
   type: DiagramType;
   nodes: string[];
   connections: [number, number][];
-  /** Optional notes to guide interpretation of the diagram. */
   notes?: string[];
+  explanation: string; // NEW FIELD – required explanation text
 };
 
 /**
@@ -110,7 +108,9 @@ export type TableBlock = {
   title?: string;
   columns: string[];
   rows: string[][];
+  explanation: string; // NEW FIELD ← required
 };
+
 
 /**
  * Group of examples under a small heading.
