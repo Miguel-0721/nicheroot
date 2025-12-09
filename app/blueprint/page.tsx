@@ -186,13 +186,24 @@ const displayName = useMemo(() => {
     if (typeof window !== "undefined") window.print();
   }
 
+  
   // Build tabs dynamically from sections + checklist
-  const sectionTabs =
-    blueprint?.sections?.map((section) => ({
-      id: section.id,
-      label: section.title,
-      icon: iconForSection(section.id),
-    })) ?? [];
+
+if (!blueprint || !blueprint.sections || !Array.isArray(blueprint.sections)) {
+  return (
+    <main className="min-h-screen bg-[var(--background)] pt-24 px-6">
+      <p className="text-sm text-red-500">
+        Invalid blueprint format. Please generate a new blueprint.
+      </p>
+    </main>
+  );
+}
+
+ const sectionTabs = blueprint.sections.map((section) => ({
+  id: section.id,
+  label: section.title,
+  icon: iconForSection(section.id),
+}));
 
   const allTabs = [
     ...sectionTabs,
@@ -1013,7 +1024,9 @@ function buildLinearFlow(
   return ordered.length > 0 ? ordered : nodes;
 }
 
-function iconForSection(id: string): string {
+function iconForSection(id?: string): string {
+  if (!id || typeof id !== "string") return "📄"; // safety fallback
+
   if (id.includes("executive")) return "✨";
   if (id.includes("founder")) return "🧑‍💻";
   if (id.includes("business-model")) return "📊";
@@ -1026,5 +1039,7 @@ function iconForSection(id: string): string {
   if (id.includes("action")) return "✅";
   if (id.includes("risk")) return "⚠️";
   if (id.includes("tool")) return "🧰";
+
   return "📄";
 }
+

@@ -8,85 +8,64 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
-// Safely extract first JSON object from a text blob
-// Extract the FIRST valid and COMPLETE JSON object from a model response
+// Safely extract JSON that is wrapped inside <json> ... </json>
 function extractFirstJson(text: string): any {
-  // Find the first '{' which should be the start of the JSON
-  const start = text.indexOf("{");
-  if (start === -1) {
-    throw new Error("No JSON start found in model response.");
+  const start = text.indexOf("<json>");
+  const end = text.indexOf("</json>");
+
+  if (start === -1 || end === -1) {
+    throw new Error("JSON wrapper not found in model output.");
   }
 
-  // Try progressively shorter slices from the end to find a valid JSON block
-  for (let end = text.length; end > start; end--) {
-    const slice = text.slice(start, end);
-
-    try {
-      return JSON.parse(slice); // If this succeeds, we’re done
-    } catch {
-      // Ignore and keep trying with a shorter slice
-    }
-  }
-
-  // If direct slicing didn’t work, try to auto-fix common truncation issues
-
-  // Count opening and closing braces
-  let openBraces = 0;
-  let closeBraces = 0;
-
-  for (const ch of text) {
-    if (ch === "{") openBraces++;
-    if (ch === "}") closeBraces++;
-  }
-
-  // If we have more opens than closes, append missing closing braces
-  let fixed = text.slice(start);
-  let missing = openBraces - closeBraces;
-
-  while (missing > 0) {
-    fixed += "}";
-    missing--;
-  }
+  const jsonText = text.substring(start + "<json>".length, end).trim();
 
   try {
-    return JSON.parse(fixed);
-  } catch (err: any) {
-    throw new Error("JSON could not be recovered from model response: " + String(err));
+    return JSON.parse(jsonText);
+  } catch (err) {
+    console.error("JSON parse failed on:", jsonText);
+    throw new Error("JSON parse failed: " + String(err));
   }
 }
 
 
+
 // Safely extract the text response from the OpenAI Responses API
 function safeGetText(response: any): string {
-  // NEW Responses API
-  if (typeof response.output_text === "string" && response.output_text.trim().length > 0) {
+  // 1) Direct output_text (most common)
+  if (response?.output_text) {
     return response.output_text.trim();
   }
 
-  // Fallback: check response.output array
-  if (Array.isArray(response.output) && response.output.length > 0) {
-    const first = response.output[0];
-
-    // Check for new format: content[{type:"output_text", text:"..."}]
-    if (first?.content && Array.isArray(first.content)) {
-      const textBlock = first.content.find((c: any) => c.text);
-      if (textBlock?.text) return textBlock.text.trim();
-    }
-
-    // Legacy fallback
-    if (first?.content?.[0]?.text) {
-      return first.content[0].text.trim();
+  // 2) New Responses API structure
+  if (Array.isArray(response?.output)) {
+    for (const block of response.output) {
+      if (Array.isArray(block?.content)) {
+        for (const item of block.content) {
+          if (item?.text) {
+            return item.text.trim();
+          }
+        }
+      }
     }
   }
 
-  // Defensive fallback
-  if (typeof response === "string") return response.trim();
+  // 3) Very old fallback formats
+  if (response?.content && Array.isArray(response.content)) {
+    for (const item of response.content) {
+      if (item?.text) {
+        return item.text.trim();
+      }
+    }
+  }
+
+  // 4) Last-resort fallback
   try {
     return JSON.stringify(response);
   } catch {
     return "";
   }
 }
+
 
 
 export async function POST(req: Request) {
@@ -101,6 +80,19 @@ export async function POST(req: Request) {
     }
 
     const systemPrompt = `
+IMPORTANT: YOUR FINAL OUTPUT MUST BE WRAPPED EXACTLY LIKE THIS:
+
+<json>
+{ ...valid BusinessBlueprint... }
+</json>
+
+If you cannot complete the JSON, output EMPTY JSON instead:
+<json>
+{}
+</json>
+
+NOTHING outside the wrapper. NO markdown. NO commentary.
+
 You are NicheRoot, an AI Business Strategist.
 
 You MUST return a SINGLE valid JSON object that matches EXACTLY this TypeScript schema (names and types):
@@ -401,25 +393,50 @@ The ids MUST be stable, lowercased, dash-separated.
 
 3. Business Model Blueprint
    - id: "business-model"
-   - Provide a niche-specific, operational explanation of how value is created, delivered, and captured.
-   - USE THE USER’S PROFILE AND CONSTRAINTS when describing the business mechanics.
-   - The intro paragraphs MUST:
-       • Explain why this model fits the user’s skills, risk tolerance, and resource levels  
-       • Include at least 1 specific example of how the user would perform the work  
-       • Include 1 sentence comparing this model to a nearby alternative
-   - Include a “value-chain” style diagram (type: "value-chain") with 5–7 nodes showing the service lifecycle.
-   - Include at least ONE lean-mini-canvas table:
-       columns: ["Component", "Description"]
-       rows: Problem, Solution, Channels, Revenue, Costs, Key Metrics
-       Descriptions must be niche-specific and actionable.
-   - Include ONE visual chart:
-       • Prefer a “revenue scenario” chart with 2 lines: Conservative vs Expected
-       • OR a bar chart with realistic month-by-month projections
+   - Purpose: explain, in simple beginner-friendly language, how this business actually works day-to-day:
+       • how it makes money  
+       • how clients move through the service  
+       • why this model fits the user’s profile and constraints
+   - CONTENT REQUIREMENTS:
+       • Start with 2–3 short paragraphs that:
+           – Explain why this model fits the user’s skills, risk tolerance, time and money levels.  
+           – Give at least one concrete example of what the user would actually do in a normal week.  
+           – Compare this model to one nearby alternative and explain why this choice is safer or better aligned for the user.  
+       • Describe the revenue engine in simple terms:
+           – Main recurring income streams (for example: monthly plans or subscriptions).  
+           – Occasional one-off jobs or upsells.  
+           – Any premium / high-leverage offers (for example: 1:1 advice or advanced packages).  
+       • Include a plain-English “growth loop” explanation, such as: good service → clients trust you → they refer you → more clients → more tools/automation → better service.
+       • Describe the main workflow / value chain in a way beginners can follow step-by-step.
+       • Include a short “time & workload” summary so the user can imagine what their weekly routine would look like.
+
+   - DIAGRAM REQUIREMENTS:
+       • Include a “value-chain” style diagram (type: "value-chain") with 5–7 nodes showing the service lifecycle from first contact to payment and follow-up.  
+       • The diagram explanation MUST highlight:
+           – where automation helps  
+           – where the user’s skill and judgment matter most  
+
+   - TABLE REQUIREMENTS:
+       • Include at least ONE lean-mini-canvas table:
+           columns: ["Component", "Description"]
+           rows: Problem, Solution, Channels, Revenue, Costs, Key Metrics
+       • Descriptions must be niche-specific, concrete, and easy for beginners to understand (no heavy jargon).
+
+   - CHART REQUIREMENTS:
+       • Include ONE visual chart:
+           – Prefer a “revenue scenario” chart with 2 lines: Conservative vs Expected  
+           – OR a simple bar chart with realistic month-by-month projections.  
+       • The chart explanation MUST:
+           – state the key assumptions in simple language (clients per month, average price, how long clients stay, etc.)  
+           – explain what the user should learn from the chart (for example: “This shows how slow, steady client growth still leads to solid income over a year.”).
+
    - nextMoves:
-       • Must contain 5–7 steps
-       • Must be highly actionable
-       • Must include both validation and setup actions
-       • MUST reference the user’s constraints (time, money, risk tolerance)
+       • Must contain 5–7 steps.  
+       • Each step MUST start with a clear action verb (Set up, Define, Test, Offer, Talk, Publish, Create, Choose).  
+       • Steps must be specific, simple, and beginner-friendly (avoid vague items like “Do market research”; instead use “Talk to 5 potential clients in [niche] and ask them X, Y, Z”).  
+       • Must include both validation actions (testing demand by talking to people or running small experiments) and setup actions (choosing tools, defining offers, setting prices).  
+       • MUST reference the user’s constraints (time, money, risk tolerance, desired pace) when suggesting actions.
+
 
 4. Market & Demand
    - id: "market-demand"
@@ -495,6 +512,56 @@ STYLE RULES:
 - Always orient back to the specific constraints and signals inferred from the userInput and history.
 
 You MUST respond with ONLY one JSON object of type BusinessBlueprint and nothing else.
+
+IMPORTANT JSON WRAPPER RULE:
+You MUST wrap the final BusinessBlueprint JSON EXACTLY like this:
+
+<json>
+{ ...valid JSON... }
+</json>
+
+ABSOLUTE RULES:
+- Never output anything outside the <json> ... </json> block.
+- Never output markdown.
+- Every property name MUST be in double quotes.
+- Every string MUST use double quotes.
+- No trailing commas.
+- No comments.
+- If you are unsure, always choose strict JSON.
+- STOP outputting before cutting a string in half — never output partial text.
+
+Your ENTIRE response must be ONLY:
+
+<json>
+{ ...valid BusinessBlueprint object... }
+</json>
+
+FINAL SAFETY FALLBACK:
+If you cannot output a complete valid JSON object, you MUST output:
+
+<json>
+{}
+</json>
+
+Never output anything else outside these tags.
+
+FINAL FAILSAFE RULE (MUST FOLLOW):
+
+If at any point you detect that you cannot produce a complete valid JSON object 
+within the allowed token limit:
+
+You MUST output EXACTLY:
+
+<json>
+{}
+</json>
+
+No commentary. No partial JSON. No truncated sections. No closing text.
+Only the EMPTY JSON wrapper.
+
+This rule overrides ALL other instructions.
+
+
 `;
 
     const userPrompt = `
@@ -507,23 +574,42 @@ ${JSON.stringify(history, null, 2)}
 Using this information, generate ONLY a complete BusinessBlueprint JSON object.
 
 STRICT JSON OUTPUT RULE:
-- Your final answer must be ONE valid JSON object.
+- Your final answer must be ONE valid BusinessBlueprint JSON object.
+- You MUST wrap it exactly like this:
+
+  <json>
+  { ...valid BusinessBlueprint object... }
+  </json>
+
+- Do NOT output anything before <json> or after </json>.
 - No markdown, no explanations, no comments, no trailing commas.
-- Never include text outside of the JSON.
+- Every property name and string MUST be in double quotes.
 - Ensure all arrays and objects are properly closed.
 - Follow the schema EXACTLY.
 - If unsure between two formats, choose the simpler JSON structure.
 
+
 `;
 
-    const response = await client.responses.create({
-      model: "gpt-4.1-mini",
-      input: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      max_output_tokens: 7000,
-    });
+   const response = await client.responses.create({
+  model: "gpt-4.1",   // IMPORTANT: not mini
+  input: [
+    {
+      role: "system",
+      content: systemPrompt
+    },
+    {
+      role: "user",
+      content: userPrompt
+    },
+    {
+      role: "assistant",
+      content: "You MUST output ONLY:\n<json>\n{...}\n</json>\nNothing before. Nothing after."
+    }
+  ],
+  max_output_tokens: 7000,
+});
+
 
     const raw = safeGetText(response);
     console.log("BLUEPRINT RAW V2:", raw);

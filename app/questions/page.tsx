@@ -118,89 +118,148 @@ export default function QuestionsPage() {
     setSelected(key);
   }
 
-  /* --------------------------------------------------
-     FINAL STEP → GENERATE BLUEPRINT
-  -------------------------------------------------- */
-  async function goNext() {
-    if (!selected || !question) return;
+/* --------------------------------------------------
+   FINAL STEP → GENERATE BLUEPRINT (3-part version)
+-------------------------------------------------- */
+async function goNext() {
+  if (!selected || !question) return;
 
-    const chosen = question.options.find((o) => o.key === selected);
-    if (!chosen) return;
+  const chosen = question.options.find((o) => o.key === selected);
+  if (!chosen) return;
 
-    const newHistory: HistoryItem[] = [
-      ...history,
-      {
-        step,
-        question: question.question,
-        choice: selected,
-        optionLabel: chosen.label,
-      },
-    ];
+  const newHistory: HistoryItem[] = [
+    ...history,
+    {
+      step,
+      question: question.question,
+      choice: selected,
+      optionLabel: chosen.label,
+    },
+  ];
 
-    setHistory(newHistory);
+  setHistory(newHistory);
 
-    if (step >= MAX_STEPS) {
-      try {
-        setLoading(true);
-        setError(null);
+  // LAST STEP → GENERATE BLUEPRINT
+  if (step >= MAX_STEPS) {
+    try {
+      setLoading(true);
+      setError(null);
 
-        const res = await fetch("/api/generate-blueprint", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            userInput,
-            history: newHistory,
-          }),
-        });
+      console.log("NR DEBUG – HISTORY PAYLOAD:", newHistory);
+      console.log("NR DEBUG – USER INPUT PAYLOAD:", userInput);
 
-        if (!res.ok) {
-          const t = await res.text();
-          throw new Error(t || "Failed to generate blueprint.");
-        }
+      // ================== PART 1 ==================
+      const part1Res = await fetch("/api/generate-blueprint-part1", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userInput,
+          history: newHistory,
+        }),
+      });
 
-        const blueprint: BusinessBlueprint = await res.json();
+      if (!part1Res.ok) throw new Error("Part 1 failed");
+      const part1 = await part1Res.json();
 
-        // Save to localStorage
-        let id = Date.now().toString();
-        if (typeof window !== "undefined") {
-          try {
-            let exist: SavedBlueprint[] = [];
-            const raw = localStorage.getItem(STORAGE_KEY);
-            if (raw) exist = JSON.parse(raw);
-
-            const createdAt = new Date().toISOString();
-            const label = createLabel(blueprint, createdAt);
-
-            const updated: SavedBlueprint[] = [
-              ...exist,
-              { id, createdAt, label, data: blueprint },
-            ];
-
-            const trimmed = updated.slice(-8);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
-
-            id = trimmed[trimmed.length - 1].id;
-          } catch (e) {
-            console.error("Failed to save blueprint:", e);
-          }
-        }
-
-        router.push(`/blueprint?id=${id}`);
-        return;
-      } catch (err: any) {
-        console.error("AI Blueprint error:", err);
-        setError(err.message || "Failed to generate blueprint. Try again.");
-        setLoading(false);
-        return;
+      if (!part1?.meta || !Array.isArray(part1.sectionsPart1)) {
+        throw new Error("Part 1 response missing sections/meta");
       }
+
+      // ================== PART 2 ==================
+      const part2Res = await fetch("/api/generate-blueprint-part2", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userInput,
+          history: newHistory,
+          part1,
+        }),
+      });
+
+      if (!part2Res.ok) throw new Error("Part 2 failed");
+      const part2 = await part2Res.json();
+
+      if (!Array.isArray(part2.sectionsPart2)) {
+        throw new Error("Part 2 response missing sectionsPart2");
+      }
+
+      // ================== PART 3 ==================
+      const part3Res = await fetch("/api/generate-blueprint-part3", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userInput,
+          history: newHistory,
+          part1,
+          part2,
+        }),
+      });
+
+      if (!part3Res.ok) throw new Error("Part 3 failed");
+      const part3 = await part3Res.json();
+
+      if (
+        !Array.isArray(part3.sectionsPart3) ||
+        !Array.isArray(part3.globalChecklist)
+      ) {
+        throw new Error("Part 3 missing required fields");
+      }
+
+      // ================== MERGE ALL PARTS ==================
+      const blueprint: BusinessBlueprint = {
+        meta: part1.meta,
+        sections: [
+          ...part1.sectionsPart1,
+          ...part2.sectionsPart2,
+          ...part3.sectionsPart3,
+        ],
+        globalChecklist: part3.globalChecklist,
+      };
+
+      // ================== SAVE BLUEPRINT ==================
+      let id = Date.now().toString();
+
+      if (typeof window !== "undefined") {
+        try {
+          let exist: SavedBlueprint[] = [];
+          const raw = localStorage.getItem(STORAGE_KEY);
+          if (raw) exist = JSON.parse(raw);
+
+          const createdAt = new Date().toISOString();
+          const label = createLabel(blueprint, createdAt);
+
+          const updated: SavedBlueprint[] = [
+            ...exist,
+            { id, createdAt, label, data: blueprint },
+          ];
+
+          const trimmed = updated.slice(-8);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(trimmed));
+          id = trimmed[trimmed.length - 1].id;
+        } catch (e) {
+          console.error("Failed to save blueprint:", e);
+        }
+      }
+
+      // ================== REDIRECT ==================
+      router.push(`/blueprint?id=${id}`);
+      return;
+    } catch (err: any) {
+      console.error("AI Blueprint error (3-part):", err);
+      setError(err.message || "Failed to generate blueprint. Try again.");
+      setLoading(false);
+      return;
     }
-
-    const nextStep = step + 1;
-    setStep(nextStep);
-    setSelected(null);
-
-    await fetchQuestion(selected);
   }
+
+  // NOT final step → load next question
+  const nextStep = step + 1;
+  setStep(nextStep);
+  setSelected(null);
+
+  await fetchQuestion(selected);
+}
+
 
   const progress = (step / MAX_STEPS) * 100;
   const activePhaseIndex = Math.min(step - 1, PHASE_LABELS.length - 1);
