@@ -123,8 +123,14 @@ type BlueprintMeta = {
   difficulty: string;       // e.g. "Simple", "Moderate", "Complex"
   startupCost: string;      // e.g. "Very low", "Low", "Medium", "High"
   expectedTimeline: string; // e.g. "4–8 weeks"
+
+  timeCommitment: string;   // e.g. "5–8 hrs/week"
+  modelSummary: string;     // 1 sentence, simple summary of the model
+  whyItFits: string;        // 1–2 sentences, professional, beginner-friendly explanation of fit
+
   scores: BlueprintScoreMetrics;
 };
+
 
 type ChartType = "line" | "bar" | "pie" | "radar" | "heatmap" | "funnel";
 
@@ -198,6 +204,9 @@ type BlueprintSection = {
 ----------------------------------------------------------
 GLOBAL STYLE RULES (APPLY TO ALL 3 SECTIONS HERE):
 
+- timeCommitment must be a realistic weekly range (like "5–8 hrs/week").
+- modelSummary must be 1 simple sentence describing how the model works.
+- whyItFits must be 1–2 sentences, professional but beginner-friendly, explaining why this model matches the user’s skills, risk level and constraints.
 - Write in **beginner-friendly** language.
 - Short paragraphs, simple sentences, no heavy jargon.
 - Still keep strategic depth: always explain the “why”, not just “what”.

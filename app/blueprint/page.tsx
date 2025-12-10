@@ -1,5 +1,6 @@
 "use client";
 import ReactMarkdown from "react-markdown";
+import { motion } from "framer-motion";
 
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
@@ -246,140 +247,184 @@ if (!blueprint || !blueprint.sections || !Array.isArray(blueprint.sections)) {
   return (
     <main className="min-h-screen bg-[var(--background)] py-16 px-4 md:px-6 text-gray-900">
       <div className="mx-auto max-w-6xl space-y-10">
-        {/* HERO HEADER */}
-        <header className="space-y-4">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold text-[var(--brand-500)] shadow-sm ring-1 ring-gray-200">
-                <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[var(--brand-500)] text-white text-[9px] font-bold">
-                  N
-                </span>
-                NicheRoot · Business Blueprint
-              </div>
+     {/* HERO HEADER */}
+<header className="space-y-4">
+  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
 
-              <h1 className="text-2xl md:text-3xl font-semibold leading-tight">
-                {displayName}
-              </h1>
-              <p className="mt-2 max-w-xl text-sm text-gray-600">
-                Generated from your answers and trade-offs. Treat this as a
-                living plan you refine as you learn more.
-              </p>
-            </div>
+    {/* Left side */}
+    <div>
+      <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold text-[var(--brand-500)] shadow-sm ring-1 ring-gray-200">
+        <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[var(--brand-500)] text-white text-[9px] font-bold">
+          N
+        </span>
+        NicheRoot · Business Blueprint
+      </div>
 
-            <div className="flex flex-col gap-3 md:items-end">
-              <select
-                value={currentId ?? ""}
-                onChange={(e) => handleSelectSaved(e.target.value)}
-                className="w-full rounded-full border border-gray-200 bg-white px-3 py-2 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-400)] md:w-72"
-              >
-                {savedList.length === 0 && (
-                  <option value="">Current blueprint</option>
-                )}
-                {savedList
-                  .slice()
-                  .reverse()
-                  .map((b) => (
-                    <option key={b.id} value={b.id}>
-                      {b.label}
-                    </option>
-                  ))}
-              </select>
+      <h1 className="text-2xl md:text-3xl font-semibold leading-tight">
+        {displayName}
+      </h1>
 
-              <button
-                onClick={handlePrint}
-                className="inline-flex items-center justify-center rounded-full bg-[var(--brand-500)] px-4 py-2 text-xs font-medium text-white shadow hover:bg-[var(--brand-400)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-400)]"
-              >
-                Print / Save as PDF
-              </button>
-            </div>
+      <p className="mt-2 max-w-xl text-sm text-gray-600">
+        Generated from your answers and trade-offs. Treat this as a living plan you refine as you learn more.
+      </p>
+    </div>
+
+    {/* Right side */}
+    <div className="flex flex-col gap-3 md:items-end">
+      <select
+        value={currentId ?? ""}
+        onChange={(e) => handleSelectSaved(e.target.value)}
+        className="w-full rounded-full border border-gray-200 bg-white px-3 py-2 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-400)] md:w-72"
+      >
+        {savedList.length === 0 && (
+          <option value="">Current blueprint</option>
+        )}
+        {savedList
+          .slice()
+          .reverse()
+          .map((b) => (
+            <option key={b.id} value={b.id}>
+              {b.label}
+            </option>
+          ))}
+      </select>
+
+      <button
+        onClick={handlePrint}
+        className="inline-flex items-center justify-center rounded-full bg-[var(--brand-500)] px-4 py-2 text-xs font-medium text-white shadow hover:bg-[var(--brand-400)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-400)]"
+      >
+        Print / Save as PDF
+      </button>
+    </div>
+
+  </div>
+
+
+</header>
+
+
+          
+{/* === SCORE CARDS (Minimal SaaS Style) === */}
+{scoreCards.length > 0 && (
+  <section className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 mt-6">
+    {scoreCards.map((card, idx) => {
+      const accents: Record<string, string> = {
+        risk: "bg-rose-500",
+        skillFit: "bg-emerald-500",
+        demand: "bg-blue-500",
+        monetization: "bg-purple-500",
+      };
+
+      const icons: Record<string, string> = {
+        risk: "🔥",
+        skillFit: "🎯",
+        demand: "📈",
+        monetization: "💰",
+      };
+
+      return (
+        <motion.div
+          key={card.key}
+          initial={{ opacity: 0, y: 6 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.25, delay: idx * 0.05 }}
+          className="relative rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200"
+        >
+          {/* Left accent bar */}
+          <div
+            className={`absolute left-0 top-0 h-full w-1 rounded-l-xl ${accents[card.key]}`}
+          />
+
+          <div className="flex items-center gap-2 mb-2">
+            <span className="text-lg">{icons[card.key]}</span>
+            <p className="text-[11px] uppercase font-semibold tracking-wide text-gray-500">
+              {card.label}
+            </p>
           </div>
 
-          {/* SUMMARY STRIP */}
-          <section className="grid gap-3 md:grid-cols-3 xl:grid-cols-5">
-            <SummaryCard label="Business model" value={meta.modelName} />
-            <SummaryCard label="Difficulty" value={meta.difficulty} />
-            <SummaryCard label="Startup cost" value={meta.startupCost} />
-            <SummaryCard
-              label="Time to first results"
-              value={meta.expectedTimeline}
-            />
-            <SummaryCard
-              label="Overall profile"
-              value={`${meta.difficulty} · ${meta.startupCost}`}
-            />
-          </section>
+          <div className="flex items-baseline gap-1">
+            <span className="text-xl font-semibold text-gray-900">
+              {card.value}
+            </span>
+            <span className="text-xs text-gray-500">/ 100</span>
+          </div>
 
-          {/* SCORE CARDS */}
-          {scoreCards.length > 0 && (
-            <section className="grid gap-3 sm:grid-cols-2 md:grid-cols-4">
-              {scoreCards.map((card) => (
-                <div
-                  key={card.key}
-                  className="rounded-2xl bg-gradient-to-br from-indigo-50 to-white p-4 shadow-sm ring-1 ring-indigo-100"
-                >
-                  <p className="text-[11px] font-semibold uppercase tracking-wide text-indigo-500">
-                    {card.label}
-                  </p>
-                  <div className="mt-2 flex items-baseline gap-2">
-                    <span className="text-2xl font-semibold">
-                      {typeof card.value === "number"
-                        ? card.value
-                        : card.value}
-                    </span>
-                    {typeof card.value === "number" && (
-                      <span className="text-xs text-gray-500">/ 100</span>
-                    )}
-                  </div>
-                  <p className="mt-1 text-[11px] text-gray-500">
-                    {card.hint}
-                  </p>
-                </div>
-              ))}
-            </section>
-          )}
-        </header>
+          <p className="mt-1 text-[11px] text-gray-600">{card.hint}</p>
+        </motion.div>
+      );
+    })}
+  </section>
+)}
+
+
+
+
+
+
+
+
 
         {/* MAIN LAYOUT */}
         <section className="grid items-start gap-8 lg:grid-cols-[260px,1fr]">
           {/* SIDEBAR */}
-          <aside className="space-y-4">
-            <div className="rounded-3xl bg-white p-4 shadow-sm ring-1 ring-gray-200">
-              <p className="mb-3 text-[11px] font-semibold uppercase text-gray-500">
-                Sections
-              </p>
-              <div className="flex flex-col gap-1">
-                {allTabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-2 rounded-full px-3 py-2 text-xs font-medium transition ${
-                      tab.id === activeTab
-                        ? "bg-[var(--brand-500)] text-white shadow-sm"
-                        : "text-gray-700 hover:bg-indigo-50"
-                    }`}
-                  >
-                    <span className="text-sm">{tab.icon}</span>
-                    <span>{tab.label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+          <aside className="space-y-4 pr-2">
 
-            <div className="rounded-3xl bg-indigo-50/70 p-4 text-[12px] text-gray-800 shadow-sm ring-1 ring-indigo-100">
-              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-indigo-600">
-                How to use this
-              </p>
-              <p className="mb-1">
-                Move through the sections in order. Each section ends with{" "}
-                <span className="font-semibold">Next moves</span> — those are
-                your immediate action steps.
-              </p>
-              <p className="mt-1 text-[11px] text-gray-600">
-                Revisit this blueprint after you test assumptions or make major
-                decisions.
-              </p>
-            </div>
-          </aside>
+  {/* Modern Minimal Sidebar */}
+  <div className="rounded-2xl bg-white p-4 shadow-sm ring-1 ring-gray-200">
+    <p className="mb-3 text-[11px] font-semibold uppercase text-gray-500 tracking-wide">
+      Sections
+    </p>
+
+    <nav className="flex flex-col">
+      {allTabs.map((tab) => {
+        const isActive = tab.id === activeTab;
+
+        return (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`
+              relative flex items-center gap-2 px-3 py-2 text-left text-sm transition
+              ${isActive ? "font-semibold text-gray-900" : "text-gray-600 hover:text-gray-900"}
+            `}
+          >
+            {/* Left accent bar */}
+            <span
+              className={`
+                absolute left-0 top-0 h-full w-1 rounded-r-md transition-all
+                ${isActive ? "bg-[var(--brand-500)]" : "bg-transparent"}
+              `}
+            />
+
+            {/* Icon */}
+            <span className={`${isActive ? "text-[var(--brand-500)]" : "text-gray-400"}`}>
+              {tab.icon}
+            </span>
+
+            {/* Label */}
+            <span>{tab.label}</span>
+          </button>
+        );
+      })}
+    </nav>
+  </div>
+
+  {/* Sidebar help box */}
+  <div className="rounded-2xl bg-indigo-50 p-4 text-[12px] text-gray-800 shadow-sm ring-1 ring-indigo-100">
+    <p className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-indigo-600">
+      How to use this
+    </p>
+    <p className="mb-1">
+      Move through the sections in order. Each section ends with{" "}
+      <span className="font-semibold">Next moves</span>.
+    </p>
+    <p className="mt-1 text-[11px] text-gray-600">
+      Revisit this blueprint as your assumptions evolve.
+    </p>
+  </div>
+
+</aside>
+
 
           {/* CONTENT CARD */}
           <div className="space-y-6 rounded-3xl bg-white p-7 shadow-lg ring-1 ring-black/5">
@@ -392,12 +437,17 @@ if (!blueprint || !blueprint.sections || !Array.isArray(blueprint.sections)) {
                 <ChecklistBlock checklist={blueprint.globalChecklist} />
               </SectionBlock>
             ) : activeSection ? (
-              <SectionBlock
-                title={activeSection.title}
-                eyebrow={activeSection.eyebrow}
-              >
-                <SectionContentRenderer content={activeSection.content} />
-              </SectionBlock>
+           <SectionBlock
+  title={activeSection.title}
+  eyebrow={activeSection.eyebrow}
+>
+  <SectionContentRenderer
+    content={activeSection.content}
+    meta={meta}
+    isExecutive={activeSection.id === "executive-overview"}
+  />
+</SectionBlock>
+
             ) : (
               <p className="text-sm text-gray-500">
                 Select a section from the sidebar to view the details.
@@ -449,14 +499,23 @@ function SectionBlock({
   children: React.ReactNode;
 }) {
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {/* Eyebrow */}
       {eyebrow && (
         <p className="text-[11px] font-semibold uppercase tracking-wide text-gray-500">
           {eyebrow}
         </p>
       )}
-      <h2 className="text-xl font-semibold text-gray-900">{title}</h2>
-      <div className="space-y-4 text-[14px] text-gray-800">{children}</div>
+
+      {/* Title */}
+      <h2 className="text-2xl font-semibold tracking-tight text-gray-900">
+        {title}
+      </h2>
+
+      {/* Content wrapper */}
+      <div className="prose prose-sm max-w-none text-gray-800 space-y-6">
+        {children}
+      </div>
     </div>
   );
 }
@@ -476,9 +535,16 @@ function NextMovesBlock({ items }: { items?: string[] }) {
     </div>
   );
 }
-
 /* ---------- SECTION CONTENT RENDERER (CLEAN + STABLE) ---------- */
-function SectionContentRenderer({ content }: { content: SectionContent }) {
+function SectionContentRenderer({
+  content,
+  meta,
+  isExecutive,
+}: {
+  content: SectionContent;
+  meta: BusinessBlueprint["meta"];
+  isExecutive?: boolean;
+}) {
   const {
     paragraphs = [],
     lists = [],
@@ -490,8 +556,47 @@ function SectionContentRenderer({ content }: { content: SectionContent }) {
     nextMoves = [],
   } = content;
 
+  // ---------- BUSINESS SNAPSHOT (only for Executive Overview) ----------
+  let snapshot: React.ReactNode = null;
+
+
+  if (isExecutive && meta) {
+    snapshot = (
+      <div className="rounded-xl bg-gray-50 p-4 text-[13px] ring-1 ring-gray-200 space-y-1">
+        <p className="text-[11px] uppercase tracking-wide font-semibold text-gray-500">
+          Business Snapshot
+        </p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-1 text-gray-700">
+          <p>
+            <span className="font-semibold">Business model:</span>{" "}
+            {meta.modelName}
+          </p>
+          <p>
+            <span className="font-semibold">Difficulty:</span>{" "}
+            {meta.difficulty}
+          </p>
+          <p>
+            <span className="font-semibold">Startup cost:</span>{" "}
+            {meta.startupCost}
+          </p>
+          <p>
+            <span className="font-semibold">First results:</span>{" "}
+            {meta.expectedTimeline}
+          </p>
+          <p>
+            <span className="font-semibold">Profile:</span>{" "}
+            {meta.difficulty} · {meta.startupCost}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Snapshot box at the top (only for Executive Overview) */}
+      {snapshot}
 
       {/* ---------- PARAGRAPHS ---------- */}
       {paragraphs.length > 0 && (
@@ -510,17 +615,16 @@ function SectionContentRenderer({ content }: { content: SectionContent }) {
       {/* ---------- LIST BLOCKS (Strengths, Weaknesses, Opportunity) ---------- */}
       {lists.length > 0 && (
         <div className="space-y-4">
-
           {/* Row 1: Strengths + Weaknesses */}
           <div className="grid gap-4 md:grid-cols-2">
             {lists
               .filter(
-                (l) =>
+                (l: any) =>
                   l.type === "strengths" ||
                   l.type === "weaknesses" ||
                   !l.type // backwards compatibility
               )
-              .map((block, idx) => (
+              .map((block: any, idx: number) => (
                 <div
                   key={idx}
                   className="rounded-2xl bg-gray-50 p-5 shadow-sm ring-1 ring-gray-200"
@@ -530,7 +634,7 @@ function SectionContentRenderer({ content }: { content: SectionContent }) {
                   </h3>
 
                   <ul className="list-disc pl-5 space-y-1.5 text-[13px]">
-                    {block.items.map((item, i) => (
+                    {block.items.map((item: string, i: number) => (
                       <li key={i}>{item}</li>
                     ))}
                   </ul>
@@ -539,18 +643,18 @@ function SectionContentRenderer({ content }: { content: SectionContent }) {
           </div>
 
           {/* Row 2: Opportunity → Full width purple */}
-          {lists.some((l) => l.type === "opportunity") && (
+          {lists.some((l: any) => l.type === "opportunity") && (
             <div className="rounded-2xl bg-indigo-50 p-5 shadow-sm ring-1 ring-indigo-200">
               {lists
-                .filter((l) => l.type === "opportunity")
-                .map((block, idx) => (
+                .filter((l: any) => l.type === "opportunity")
+                .map((block: any, idx: number) => (
                   <div key={idx}>
                     <h3 className="mb-3 text-[14px] font-semibold text-indigo-900">
                       {block.title}
                     </h3>
 
                     <ul className="list-disc pl-5 space-y-1.5 text-[13px] text-indigo-900/90">
-                      {block.items.map((item, i) => (
+                      {block.items.map((item: string, i: number) => (
                         <li key={i}>{item}</li>
                       ))}
                     </ul>
@@ -561,70 +665,64 @@ function SectionContentRenderer({ content }: { content: SectionContent }) {
         </div>
       )}
 
-     {/* ---------- TABLES ---------- */}
-{tables.length > 0 && (
-  <div className="space-y-4">
-    {tables.map((table, idx) => (
-      <div
-        key={idx}
-        className="overflow-x-auto rounded-xl bg-gray-50 p-4 text-[12px] ring-1 ring-gray-200 space-y-3"
-      >
-        {/* Title */}
-        {table.title && (
-          <p className="text-[12px] font-semibold uppercase text-gray-700">
-            {table.title}
-          </p>
-        )}
+      {/* ---------- TABLES ---------- */}
+      {tables.length > 0 && (
+        <div className="space-y-4">
+          {tables.map((table: any, idx: number) => (
+            <div
+              key={idx}
+              className="overflow-x-auto rounded-xl bg-gray-50 p-4 text-[12px] ring-1 ring-gray-200 space-y-3"
+            >
+              {table.title && (
+                <p className="text-[12px] font-semibold uppercase text-gray-700">
+                  {table.title}
+                </p>
+              )}
 
-        {/* Table */}
-        <table className="min-w-full border-separate border-spacing-y-1">
-          <thead className="text-[11px] text-gray-500">
-            <tr>
-              {table.columns.map((col, i) => (
-                <th key={i} className="px-2 py-1 text-left">
-                  {col}
-                </th>
-              ))}
-            </tr>
-          </thead>
+              <table className="min-w-full border-separate border-spacing-y-1">
+                <thead className="text-[11px] text-gray-500">
+                  <tr>
+                    {table.columns.map((col: string, i: number) => (
+                      <th key={i} className="px-2 py-1 text-left">
+                        {col}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
 
-          <tbody>
-            {table.rows.map((row, rIdx) => (
-              <tr key={rIdx} className="bg-white/70">
-                {row.map((cell, cIdx) => (
-                  <td key={cIdx} className="px-2 py-2">
-                    {cell}
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+                <tbody>
+                  {table.rows.map((row: string[], rIdx: number) => (
+                    <tr key={rIdx} className="bg-white/70">
+                      {row.map((cell: string, cIdx: number) => (
+                        <td key={cIdx} className="px-2 py-2">
+                          {cell}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
 
-       {/* Explanation OUTSIDE the table box */}
-{table.explanation && (
-  <div className="mt-3 ml-1">
-    <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
-      Insight
-    </p>
-    <p className="text-[13px] text-gray-700 leading-relaxed">
-      {table.explanation}
-    </p>
-  </div>
-)}
-
-      </div>
-    ))}
-  </div>
-)}
-
-
+              {table.explanation && (
+                <div className="mt-3 ml-1">
+                  <p className="text-[11px] font-semibold text-gray-500 uppercase tracking-wide">
+                    Insight
+                  </p>
+                  <p className="text-[13px] text-gray-700 leading-relaxed">
+                    {table.explanation}
+                  </p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* ---------- CHARTS ---------- */}
       {charts.length > 0 && (
         <div className="grid gap-6 md:grid-cols-2">
           {charts.map((chart, idx) => (
-            <ChartBlockRenderer key={idx} chart={chart} />
+            <ChartBlockRenderer key={idx} chart={chart as ChartBlock} />
           ))}
         </div>
       )}
@@ -633,7 +731,7 @@ function SectionContentRenderer({ content }: { content: SectionContent }) {
       {diagrams.length > 0 && (
         <div className="space-y-4">
           {diagrams.map((d, idx) => (
-            <DiagramBlockRenderer key={idx} diagram={d} />
+            <DiagramBlockRenderer key={idx} diagram={d as DiagramBlock} />
           ))}
         </div>
       )}
@@ -641,7 +739,7 @@ function SectionContentRenderer({ content }: { content: SectionContent }) {
       {/* ---------- IMAGES ---------- */}
       {images.length > 0 && (
         <div className="grid gap-4 md:grid-cols-2">
-          {images.map((img, idx) => (
+          {images.map((img: any, idx: number) => (
             <figure
               key={idx}
               className="overflow-hidden rounded-xl bg-gray-50 ring-1 ring-gray-200"
@@ -667,7 +765,7 @@ function SectionContentRenderer({ content }: { content: SectionContent }) {
       {/* ---------- EXAMPLES ---------- */}
       {examples.length > 0 && (
         <div className="space-y-3">
-          {examples.map((ex, idx) => (
+          {examples.map((ex: any, idx: number) => (
             <div
               key={idx}
               className="rounded-xl bg-indigo-50/80 p-4 text-[13px] ring-1 ring-indigo-100"
@@ -678,7 +776,7 @@ function SectionContentRenderer({ content }: { content: SectionContent }) {
                 </p>
               )}
               <ul className="list-disc pl-4 space-y-1">
-                {ex.items.map((item, i) => (
+                {ex.items.map((item: string, i: number) => (
                   <li key={i}>{item}</li>
                 ))}
               </ul>
@@ -710,16 +808,21 @@ function ChartBlockRenderer({ chart }: { chart: ChartBlock }) {
       : undefined);
 
   const safeYKeys =
-    yKeys && yKeys.length > 0
+    (yKeys && yKeys.length > 0
       ? yKeys
       : firstRow
       ? Object.keys(firstRow).filter(
           (k) => typeof (firstRow as any)[k] === "number"
         )
-      : [];
+      : []) as string[];
 
   // If no data or no keys → Show friendly message
-  if (!data || data.length === 0 || (!safeXKey && type !== "pie") || safeYKeys.length === 0) {
+  if (
+    !data ||
+    data.length === 0 ||
+    (!safeXKey && type !== "pie") ||
+    safeYKeys.length === 0
+  ) {
     return (
       <div className="rounded-xl bg-gray-50 p-4 ring-1 ring-gray-200 text-[12px] text-gray-500">
         {title && (
@@ -793,44 +896,35 @@ function ChartBlockRenderer({ chart }: { chart: ChartBlock }) {
               />
             </PieChart>
           ) : type === "radar" ? (
-<RadarChart
-  data={data}
-  cx="50%"
-  cy="50%"
-  outerRadius="68%"   // slightly bigger, still safe
-  margin={{ top: 20, right: 90, bottom: 20, left: 20 }}
->
-  <PolarGrid stroke="#E5E7EB" />
-
-  <PolarAngleAxis
-    dataKey={safeXKey}
-    tick={{
-      fontSize: 12,
-      fill: "#4B5563",
-      width: 80,        // keeps same text behavior
-    }}
-  />
-
-  <PolarRadiusAxis
-    angle={90}
-    domain={[0, 100]}
-    tick={false}
-    stroke="#E5E7EB"
-  />
-
-  <Radar
-    dataKey={safeYKeys[0]}
-    fill={palette[0]}
-    stroke={palette[0]}
-    fillOpacity={0.45}
-  />
-</RadarChart>
-
-
-
-
-
-
+            <RadarChart
+              data={data}
+              cx="50%"
+              cy="50%"
+              outerRadius="68%"
+              margin={{ top: 20, right: 90, bottom: 20, left: 20 }}
+            >
+              <PolarGrid stroke="#E5E7EB" />
+              <PolarAngleAxis
+                dataKey={safeXKey}
+                tick={{
+                  fontSize: 12,
+                  fill: "#4B5563",
+                  width: 80,
+                }}
+              />
+              <PolarRadiusAxis
+                angle={90}
+                domain={[0, 100]}
+                tick={false}
+                stroke="#E5E7EB"
+              />
+              <Radar
+                dataKey={safeYKeys[0]}
+                fill={palette[0]}
+                stroke={palette[0]}
+                fillOpacity={0.45}
+              />
+            </RadarChart>
           ) : type === "funnel" ? (
             <BarChart data={data} layout="vertical">
               <CartesianGrid strokeDasharray="3 3" />
@@ -864,29 +958,26 @@ function ChartBlockRenderer({ chart }: { chart: ChartBlock }) {
         </ResponsiveContainer>
       </div>
 
+      {/* Insight below chart */}
+      {chart.explanation && (
+        <div className="mt-3 ml-1">
+          <p className="text-[11px] font-semibold uppercase text-gray-500 tracking-wide">
+            Insight
+          </p>
+          <p className="text-[13px] leading-relaxed text-gray-700">
+            {chart.explanation}
+          </p>
+        </div>
+      )}
 
-{/* Insight below chart */}
-{chart.explanation && (
-  <div className="mt-3 ml-1">
-    <p className="text-[11px] font-semibold uppercase text-gray-500 tracking-wide">
-      Insight
-    </p>
-    <p className="text-[13px] leading-relaxed text-gray-700">
-      {chart.explanation}
-    </p>
-  </div>
-)}
-
-{note && (
-  <p className="mt-2 text-[11px] text-gray-500">{note}</p>
-)}
-</div>
-);
-
+      {note && (
+        <p className="mt-2 text-[11px] text-gray-500">{note}</p>
+      )}
+    </div>
+  );
 }
 
 /* ---------- DIAGRAM RENDERER ---------- */
-
 function DiagramBlockRenderer({ diagram }: { diagram: DiagramBlock }) {
   const { title, type, nodes, connections, notes, explanation } = diagram;
 
@@ -905,62 +996,58 @@ function DiagramBlockRenderer({ diagram }: { diagram: DiagramBlock }) {
       ? "bg-amber-50 text-amber-800 ring-amber-100"
       : "bg-gray-50 text-gray-800 ring-gray-200";
 
- return (
-  <>
-    <div className="space-y-3 rounded-xl bg-white p-4 ring-1 ring-gray-200">
-      {/* Title */}
-      {title && (
-        <p className="text-[12px] font-semibold uppercase text-gray-700">
-          {title}
-        </p>
-      )}
+  return (
+    <>
+      <div className="space-y-3 rounded-xl bg-white p-4 ring-1 ring-gray-200">
+        {/* Title */}
+        {title && (
+          <p className="text-[12px] font-semibold uppercase text-gray-700">
+            {title}
+          </p>
+        )}
 
-      {/* Node Flow */}
-      <div className="flex flex-wrap items-center gap-2 text-[13px]">
-        {orderedNodes.map((node, idx) => (
-          <div key={idx} className="flex items-center gap-2">
-            <span
-              className={`rounded-full px-3 py-1 text-xs ring-1 ${chipColor}`}
-            >
-              {node}
-            </span>
-            {idx < orderedNodes.length - 1 && (
-              <span className="text-gray-400 text-sm">→</span>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Notes */}
-      {notes && notes.length > 0 && (
-        <ul className="mt-2 list-disc pl-4 text-[12px] text-gray-600">
-          {notes.map((n, idx) => (
-            <li key={idx}>{n}</li>
+        {/* Node Flow */}
+        <div className="flex flex-wrap items-center gap-2 text-[13px]">
+          {orderedNodes.map((node, idx) => (
+            <div key={idx} className="flex items-center gap-2">
+              <span
+                className={`rounded-full px-3 py-1 text-xs ring-1 ${chipColor}`}
+              >
+                {node}
+              </span>
+              {idx < orderedNodes.length - 1 && (
+                <span className="text-gray-400 text-sm">→</span>
+              )}
+            </div>
           ))}
-        </ul>
-      )}
-    </div>
+        </div>
 
-    {/* Insight BELOW the card */}
-    {explanation && (
-      <div className="mt-3 ml-1">
-        <p className="text-[11px] font-semibold uppercase text-gray-500 tracking-wide">
-          Insight
-        </p>
-        <p className="text-[13px] leading-relaxed text-gray-700">
-          {explanation}
-        </p>
+        {/* Notes */}
+        {notes && notes.length > 0 && (
+          <ul className="mt-2 list-disc pl-4 text-[12px] text-gray-600">
+            {notes.map((n, idx) => (
+              <li key={idx}>{n}</li>
+            ))}
+          </ul>
+        )}
       </div>
-    )}
-  </>
-);
+
+      {/* Insight BELOW the card */}
+      {explanation && (
+        <div className="mt-3 ml-1">
+          <p className="text-[11px] font-semibold uppercase text-gray-500 tracking-wide">
+            Insight
+          </p>
+          <p className="text-[13px] leading-relaxed text-gray-700">
+            {explanation}
+          </p>
+        </div>
+      )}
+    </>
+  );
 }
 
-
-
 /* ---------- CHECKLIST ---------- */
-
-
 function ChecklistBlock({ checklist }: { checklist: string[] }) {
   if (!checklist || checklist.length === 0) {
     return (
@@ -1042,4 +1129,3 @@ function iconForSection(id?: string): string {
 
   return "📄";
 }
-
