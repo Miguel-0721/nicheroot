@@ -245,74 +245,81 @@ if (!blueprint || !blueprint.sections || !Array.isArray(blueprint.sections)) {
 }
   
   return (
-    <main className="min-h-screen bg-[var(--background)] py-16 px-4 md:px-6 text-gray-900">
+   <main className="min-h-screen bg-[var(--background)] pt-10 pb-16 px-4 md:px-6 text-gray-900">
+
       <div className="mx-auto max-w-6xl space-y-10">
-     {/* HERO HEADER */}
-<header className="space-y-4">
-  <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+    <header className="space-y-3 mt-2">
 
-    {/* Left side */}
-    <div>
-      <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold text-[var(--brand-500)] shadow-sm ring-1 ring-gray-200">
-        <span className="inline-flex h-4 w-4 items-center justify-center rounded-full bg-[var(--brand-500)] text-white text-[9px] font-bold">
-          N
-        </span>
-        NicheRoot · Business Blueprint
-      </div>
 
-      <h1 className="text-2xl md:text-3xl font-semibold leading-tight">
-        {displayName}
-      </h1>
+  {/* TITLE + SUBTITLE */}
+  <div>
+    <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
+      {displayName}
+    </h1>
 
-      <p className="mt-2 max-w-xl text-sm text-gray-600">
-        Generated from your answers and trade-offs. Treat this as a living plan you refine as you learn more.
-      </p>
-    </div>
+    <p className="mt-1 text-sm text-gray-600 max-w-xl">
+      Generated from your constraints, goals, and trade-offs.
+    </p>
+  </div>
 
-    {/* Right side */}
-    <div className="flex flex-col gap-3 md:items-end">
+  {/* SELECTOR + PRINT BUTTON */}
+  <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-3">
+
+
+    {/* Blueprint Selector */}
+    <div className="relative sm:w-80">
       <select
         value={currentId ?? ""}
         onChange={(e) => handleSelectSaved(e.target.value)}
-        className="w-full rounded-full border border-gray-200 bg-white px-3 py-2 text-xs shadow-sm focus:outline-none focus:ring-2 focus:ring-[var(--brand-400)] md:w-72"
+        className="w-full rounded-full border border-gray-300 bg-white px-4 pr-10 py-2.5 text-sm shadow-sm hover:border-gray-400 transition"
       >
-        {savedList.length === 0 && (
-          <option value="">Current blueprint</option>
-        )}
-        {savedList
-          .slice()
-          .reverse()
-          .map((b) => (
-            <option key={b.id} value={b.id}>
-              {b.label}
-            </option>
-          ))}
+        <option value="">Current Blueprint</option>
+        {savedList.slice().reverse().map((b) => (
+          <option key={b.id} value={b.id}>{b.label}</option>
+        ))}
       </select>
 
-      <button
-        onClick={handlePrint}
-        className="inline-flex items-center justify-center rounded-full bg-[var(--brand-500)] px-4 py-2 text-xs font-medium text-white shadow hover:bg-[var(--brand-400)] focus:outline-none focus:ring-2 focus:ring-[var(--brand-400)]"
-      >
-        Print / Save as PDF
-      </button>
+      <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-500">
+        ▼
+      </span>
     </div>
 
+    {/* Print button */}
+    <button
+      onClick={handlePrint}
+      className="inline-flex items-center justify-center rounded-full bg-[var(--brand-500)]
+                 px-6 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-[var(--brand-400)]
+                 transition focus:ring-2 focus:ring-[var(--brand-400)]"
+    >
+      🖨️ Print / Save as PDF
+    </button>
+
   </div>
-
-
 </header>
 
 
-          
-{/* === SCORE CARDS (Minimal SaaS Style) === */}
+
+
+
+
+
+
+{/* === SCORE CARDS (Premium Clean SaaS Style – Recommended) === */}
 {scoreCards.length > 0 && (
   <section className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 mt-6">
     {scoreCards.map((card, idx) => {
-      const accents: Record<string, string> = {
-        risk: "bg-rose-500",
-        skillFit: "bg-emerald-500",
-        demand: "bg-blue-500",
-        monetization: "bg-purple-500",
+      const borderColors: Record<string, string> = {
+        risk: "border-rose-300",
+        skillFit: "border-emerald-300",
+        demand: "border-blue-300",
+        monetization: "border-purple-300",
+      };
+
+      const textColors: Record<string, string> = {
+        risk: "text-rose-600",
+        skillFit: "text-emerald-600",
+        demand: "text-blue-600",
+        monetization: "text-purple-600",
       };
 
       const icons: Record<string, string> = {
@@ -328,33 +335,32 @@ if (!blueprint || !blueprint.sections || !Array.isArray(blueprint.sections)) {
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25, delay: idx * 0.05 }}
-          className="relative rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200"
+          className={`rounded-xl bg-white p-4 shadow-sm border ${borderColors[card.key]}`}
         >
-          {/* Left accent bar */}
-          <div
-            className={`absolute left-0 top-0 h-full w-1 rounded-l-xl ${accents[card.key]}`}
-          />
-
-          <div className="flex items-center gap-2 mb-2">
+          {/* Icon + Label */}
+          <div className="flex items-center gap-2 mb-1">
             <span className="text-lg">{icons[card.key]}</span>
-            <p className="text-[11px] uppercase font-semibold tracking-wide text-gray-500">
+            <p className={`text-[12px] uppercase font-semibold tracking-wide ${textColors[card.key]}`}>
               {card.label}
             </p>
           </div>
 
+          {/* Value */}
           <div className="flex items-baseline gap-1">
-            <span className="text-xl font-semibold text-gray-900">
+            <span className="text-2xl font-semibold text-gray-900">
               {card.value}
             </span>
-            <span className="text-xs text-gray-500">/ 100</span>
+            <span className="text-xs text-gray-600">/ 100</span>
           </div>
 
+          {/* Hint */}
           <p className="mt-1 text-[11px] text-gray-600">{card.hint}</p>
         </motion.div>
       );
     })}
   </section>
 )}
+
 
 
 
