@@ -43,6 +43,33 @@ const STORAGE_KEY = "nicheroot_blueprints_v2";
 export default function BlueprintPage() {
   const searchParams = useSearchParams();
 
+/* ---------------- SMALL HOVER TOOLTIP ---------------- */
+function HoverTooltip({ text, color }: { text: string; color: string }) {
+  const bg = {
+    risk: "bg-rose-600/95 border-rose-400/60",
+    skillFit: "bg-emerald-600/95 border-emerald-400/60",
+    demand: "bg-blue-600/95 border-blue-400/60",
+    monetization: "bg-purple-600/95 border-purple-400/60",
+  }[color] || "bg-gray-900/95 border-gray-700/60";
+
+  return (
+    <div
+      className={`
+        absolute left-1/2 top-full mt-2 -translate-x-1/2 w-64
+        rounded-lg backdrop-blur-sm text-white text-xs p-3 shadow-xl
+        opacity-0 group-hover:opacity-100 pointer-events-none
+        transition-all duration-200 z-50 border
+        ${bg}
+      `}
+    >
+      {text}
+    </div>
+  );
+}
+
+
+
+  
   const [blueprint, setBlueprint] = useState<BusinessBlueprint | null>(null);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
@@ -120,6 +147,70 @@ const displayName = useMemo(() => {
   if (!raw) return "Your blueprint";
   return raw.length < 90 ? raw : raw.slice(0, 90) + "…";
 }, [blueprint]);
+
+
+  /* ---------------- SCORE EXPLANATIONS (FULL PREMIUM VERSION) ---------------- */
+const scoreExplanations: Record<string, string> = {
+  risk: `
+Risk Score reflects how stable or fragile this business model is.
+
+Calculated from:
+• Market volatility in your selected niche
+• Dependency on a small number of clients
+• Operational complexity and failure rate patterns
+• One-time revenue vs recurring revenue balance
+
+Lower scores indicate higher risk.
+To improve: choose models with recurring revenue, broader demand, or simpler operations.
+
+This score is based on your personal inputs + market assumptions.
+`,
+
+  skillFit: `
+Skill Fit measures how strongly your existing strengths align with this model.
+
+Calculated from:
+• The skills you selected during matching
+• Core competencies required (sales, technical, creative, operational)
+• Level of specialization the model requires
+
+Higher scores mean you naturally fit this business.
+To improve: choose ideas that rely more on your strongest proven abilities.
+
+This score is based on your personal inputs + model competencies.
+`,
+
+  demand: `
+Demand Score estimates current and emerging market appetite.
+
+Calculated from:
+• Search trends and audience size
+• Market growth rates
+• Existing saturation and competitor intensity
+• How necessary or urgent the product/service is
+
+Higher scores indicate easier customer acquisition.
+To improve: target broader markets or underserved segments.
+
+This score is based on your personal inputs + market data patterns.
+`,
+
+  monetization: `
+Monetization Score evaluates earning strength and revenue potential.
+
+Calculated from:
+• Number and quality of revenue streams
+• Pricing power and margin potential
+• Scalability of the offer
+• Profitability benchmarks in similar business models
+
+Higher scores mean stronger earning potential.
+To improve: choose models with stronger pricing, multiple revenue streams, or low cost of delivery.
+
+This score is based on your personal inputs + financial assumptions for the model.
+`,
+};
+
 
 
   /* ---------------- SCORE CARDS ---------------- */
@@ -248,53 +339,86 @@ if (!blueprint || !blueprint.sections || !Array.isArray(blueprint.sections)) {
    <main className="min-h-screen bg-[var(--background)] pt-10 pb-16 px-4 md:px-6 text-gray-900">
 
       <div className="mx-auto max-w-6xl space-y-10">
-    <header className="space-y-3 mt-2">
+   <header className="px-1 pt-1">
 
 
-  {/* TITLE + SUBTITLE */}
-  <div>
-    <h1 className="text-3xl font-semibold tracking-tight text-gray-900">
-      {displayName}
-    </h1>
 
-    <p className="mt-1 text-sm text-gray-600 max-w-xl">
-      Generated from your constraints, goals, and trade-offs.
-    </p>
-  </div>
+  {/* TOP ROW: TITLE + ACTIONS */}
+  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
 
-  {/* SELECTOR + PRINT BUTTON */}
-  <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-3">
+{/* LEFT → Title Group */}
+<div className="max-w-3xl space-y-1 pt-2">
+  <p className="text-[11px] font-semibold uppercase tracking-wide text-[var(--brand-500)]">
+    Business Blueprint
+  </p>
+
+  <h1 className="text-4xl font-semibold leading-snug text-gray-900 tracking-tight">
+    {displayName}
+  </h1>
+
+  <p className="text-[15px] text-gray-600 max-w-xl leading-relaxed">
+    Generated from your constraints, goals, and trade-offs.
+  </p>
+</div>
 
 
-    {/* Blueprint Selector */}
-    <div className="relative sm:w-80">
-      <select
-        value={currentId ?? ""}
-        onChange={(e) => handleSelectSaved(e.target.value)}
-        className="w-full rounded-full border border-gray-300 bg-white px-4 pr-10 py-2.5 text-sm shadow-sm hover:border-gray-400 transition"
+{/* ❤️ ADD THIS EXACT DIVIDER HERE */}
+<div className="h-px bg-gray-200/70 mt-4"></div>
+
+{/* RIGHT → Actions Group */}
+
+
+
+
+    {/* RIGHT → Actions Group */}
+    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+
+      {/* Selector */}
+      <div className="flex flex-col">
+        <label className="text-[10px] uppercase tracking-wide font-semibold text-gray-500 mb-1">
+          Your saved blueprints
+        </label>
+
+        <div className="relative">
+          <select
+            value={currentId ?? ""}
+            onChange={(e) => handleSelectSaved(e.target.value)}
+            className="w-40 rounded-full border border-gray-300 bg-white px-4 pr-8 py-1.5 text-sm shadow-sm hover:border-gray-400 transition"
+          >
+            <option value="">Current Blueprint</option>
+            {savedList.slice().reverse().map((b) => (
+              <option key={b.id} value={b.id}>{b.label}</option>
+            ))}
+          </select>
+
+          {/* SVG Chevron */}
+          <svg
+            className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+          </svg>
+        </div>
+      </div>
+
+      {/* Slim Print Button */}
+      <button
+        onClick={handlePrint}
+        className="inline-flex items-center gap-2 rounded-full bg-[var(--brand-500)]
+                   px-4 py-1.5 text-sm font-medium text-white shadow-sm
+                   hover:bg-[var(--brand-400)] transition active:scale-[0.97]
+                   focus:ring-2 focus:ring-[var(--brand-400)]"
       >
-        <option value="">Current Blueprint</option>
-        {savedList.slice().reverse().map((b) => (
-          <option key={b.id} value={b.id}>{b.label}</option>
-        ))}
-      </select>
+        <span className="text-base leading-none">🖨️</span>
+        PDF
+      </button>
 
-      <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-xs text-gray-500">
-        ▼
-      </span>
     </div>
-
-    {/* Print button */}
-    <button
-      onClick={handlePrint}
-      className="inline-flex items-center justify-center rounded-full bg-[var(--brand-500)]
-                 px-6 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-[var(--brand-400)]
-                 transition focus:ring-2 focus:ring-[var(--brand-400)]"
-    >
-      🖨️ Print / Save as PDF
-    </button>
-
   </div>
+
 </header>
 
 
@@ -303,10 +427,17 @@ if (!blueprint || !blueprint.sections || !Array.isArray(blueprint.sections)) {
 
 
 
+<div className="h-px bg-gray-200/70 mt-4 mb-4"></div>
+
 
 {/* === SCORE CARDS (Premium Clean SaaS Style – Recommended) === */}
 {scoreCards.length > 0 && (
-  <section className="grid gap-4 sm:grid-cols-2 md:grid-cols-4 mt-6">
+  <section className="grid gap-5 sm:grid-cols-2 md:grid-cols-4 mt-6">
+
+
+
+
+
     {scoreCards.map((card, idx) => {
       const borderColors: Record<string, string> = {
         risk: "border-rose-300",
@@ -335,15 +466,32 @@ if (!blueprint || !blueprint.sections || !Array.isArray(blueprint.sections)) {
           initial={{ opacity: 0, y: 6 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.25, delay: idx * 0.05 }}
-          className={`rounded-xl bg-white p-4 shadow-sm border ${borderColors[card.key]}`}
+          className={`rounded-lg bg-white p-4 shadow border ${borderColors[card.key]}
+              transition-all hover:shadow-md`}
+
+
         >
-          {/* Icon + Label */}
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-lg">{icons[card.key]}</span>
-            <p className={`text-[12px] uppercase font-semibold tracking-wide ${textColors[card.key]}`}>
-              {card.label}
-            </p>
-          </div>
+       {/* Icon + Label + Tooltip trigger */}
+<div className="flex items-center gap-2 mb-1 relative">
+
+
+  {/* Icon */}
+  <span className="text-lg">{icons[card.key]}</span>
+
+  {/* Label */}
+  <p className={`text-[12px] uppercase font-semibold tracking-wide ${textColors[card.key]}`}>
+    {card.label}
+  </p>
+
+  {/* INFO ICON WITH TOOLTIP */}
+  <div className="relative group inline-flex items-center">
+    <span className="text-gray-400 text-sm cursor-pointer select-none">ⓘ</span>
+    <HoverTooltip text={scoreExplanations[card.key]} color={card.key} />
+
+  </div>
+
+</div>
+
 
           {/* Value */}
           <div className="flex items-baseline gap-1">
@@ -371,7 +519,8 @@ if (!blueprint || !blueprint.sections || !Array.isArray(blueprint.sections)) {
 
 
         {/* MAIN LAYOUT */}
-        <section className="grid items-start gap-8 lg:grid-cols-[260px,1fr]">
+        <section className="grid items-start gap-8 lg:grid-cols-[260px,1fr] mt-4">
+
           {/* SIDEBAR */}
           <aside className="space-y-4 pr-2">
 
@@ -397,8 +546,9 @@ if (!blueprint || !blueprint.sections || !Array.isArray(blueprint.sections)) {
             {/* Left accent bar */}
             <span
               className={`
-                absolute left-0 top-0 h-full w-1 rounded-r-md transition-all
-                ${isActive ? "bg-[var(--brand-500)]" : "bg-transparent"}
+                absolute left-0 top-0 h-full w-[3px] rounded-r-md transition-all
+                ${isActive ? "bg-[var(--brand-500)]/80" : "bg-transparent"}
+
               `}
             />
 
@@ -433,7 +583,8 @@ if (!blueprint || !blueprint.sections || !Array.isArray(blueprint.sections)) {
 
 
           {/* CONTENT CARD */}
-          <div className="space-y-6 rounded-3xl bg-white p-7 shadow-lg ring-1 ring-black/5">
+          <div className="space-y-6 rounded-xl bg-white p-5 shadow ring-1 ring-gray-200">
+
             {/* SECTION CONTENT */}
             {activeTab === "checklist" ? (
               <SectionBlock
