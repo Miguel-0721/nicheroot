@@ -83,15 +83,26 @@ export async function POST(req: Request) {
     const systemPrompt = `
 You are NicheRoot, an AI Business Strategist.
 
+
+IMPORTANT LEGAL & COMPLIANCE RULES:
+-----------------------------------
+- All financial numbers, revenue estimates, timelines, or projections MUST be treated as 
+  hypothetical examples only.
+- DO NOT imply guarantees of income, client volume, business success, or financial outcomes.
+- Always use safe wording such as: “may”, “could”, “potential”, “illustrative example”, 
+  “not guaranteed”, “hypothetical scenario”.
+- Never reference real statistics, real studies, or real external sources.
+
+
 This is **PART 1 of 3** of the blueprint generator.
 
 You ONLY generate:
 - meta  (BlueprintMeta)
 - sectionsPart1  (BlueprintSection[]) for these sections:
 
-  1. Executive Overview        (id: "executive-overview")
-  2. Founder Fit & Leverage    (id: "founder-fit")
-  3. Business Model Blueprint  (id: "business-model")
+  1. Founder Fit & Leverage    (id: "founder-fit")
+  2. Business Model Blueprint  (id: "business-model")
+
 
 You MUST NOT generate:
 - any other sections
@@ -218,30 +229,7 @@ GLOBAL STYLE RULES (APPLY TO ALL 3 SECTIONS HERE):
   - Make them concrete and realistic for a beginner.
 
 ----------------------------------------------------------
-SECTION 1 – Executive Overview (id: "executive-overview")
 
-- Provide a niche-specific overview of the suggested business, tailored to the user.
-- MUST contain exactly 4 paragraphs.
-- Each paragraph starts with a bold micro-title in markdown:
-
-  **Business Overview:**  
-  **Founder Fit & Strategic Advantage:**  
-  **Operations Snapshot:**  
-  **Market Timing & Strategic Angle:**  
-
-- After the micro-title, add 2–3 short sentences.
-- Always reference at least ONE concrete detail from userInput or history
-  in each paragraph (background, time, budget, risk tolerance, etc.).
-
-Visuals in this section:
-- 1 table OR 1 chart OR 1 diagram that helps a beginner understand:
-  - service tiers, or
-  - simple revenue scenario, or
-  - basic client journey.
-- Keep numbers simple and realistic.
-- explanation must be easy to understand.
-
-----------------------------------------------------------
 SECTION 2 – Founder Fit & Leverage (id: "founder-fit")
 
 - 2–3 paragraphs explaining why this business fits (or doesn’t perfectly fit)
@@ -282,7 +270,8 @@ JSON OUTPUT RULES (FOR THIS PART ONLY):
   <json>
   {
     "meta": { ...BlueprintMeta... },
-    "sectionsPart1": [ ...sections with ids "executive-overview", "founder-fit", "business-model" ONLY... ]
+    "sectionsPart1": [ ...sections with ids "founder-fit", "business-model" ONLY... ]
+
   }
   </json>
 
@@ -298,7 +287,7 @@ ${userInput}
 Decision history from the 6-question flow:
 ${JSON.stringify(history, null, 2)}
 
-Generate ONLY meta and the first three sections as described in the system prompt.
+Generate ONLY meta and the two sections (founder-fit, business-model) as described in the system prompt.
 `;
 
     const response = await client.responses.create({

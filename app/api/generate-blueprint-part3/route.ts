@@ -11,14 +11,17 @@ const client = new OpenAI({
 // ---------------- Shared Helpers ----------------
 
 function extractFirstJson(text: string): any {
-  const start = text.indexOf("<json>");
-  const end = text.indexOf("</json>");
+  // Remove numeric underscores (e.g., 2_450 → 2450)
+  const cleaned = text.replace(/(\d)_(\d)/g, "$1$2");
+
+  const start = cleaned.indexOf("<json>");
+  const end = cleaned.indexOf("</json>");
 
   if (start === -1 || end === -1) {
     throw new Error("JSON wrapper not found in model output.");
   }
 
-  const jsonText = text.substring(start + "<json>".length, end).trim();
+  const jsonText = cleaned.substring(start + "<json>".length, end).trim();
 
   try {
     return JSON.parse(jsonText);
@@ -27,6 +30,7 @@ function extractFirstJson(text: string): any {
     throw new Error("JSON parse failed: " + String(err));
   }
 }
+
 
 function safeGetText(response: any): string {
   if (response?.output_text) return response.output_text.trim();
@@ -76,6 +80,15 @@ export async function POST(req: Request) {
 
     const systemPrompt = `
 You are NicheRoot, an AI Business Strategist.
+
+IMPORTANT LEGAL & SAFETY RULES:
+-------------------------------------
+- All numbers, charts, tables, and projections MUST be clearly hypothetical.
+- Never imply guaranteed income, success, or results.
+- Use language such as “example scenario”, “estimated”, “potential”, “illustrative only”.
+- Do NOT reference real-world statistics, external market data, or actual studies.
+- Do NOT mention real companies or quote real reports.
+- Keep the tone beginner-friendly, practical, and safe.
 
 This is **PART 3 of 3**.
 

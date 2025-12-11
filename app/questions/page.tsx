@@ -161,6 +161,33 @@ async function goNext() {
       if (!part1Res.ok) throw new Error("Part 1 failed");
       const part1 = await part1Res.json();
 
+// ================== EXECUTIVE OVERVIEW (NEW) ==================
+const execRes = await fetch("/api/generate-blueprint-executive-overview", {
+  method: "POST",
+  headers: { "Content-Type": "application/json" },
+  body: JSON.stringify({
+    userInput,
+    history: newHistory,
+    meta: part1.meta,
+  }),
+});
+
+if (!execRes.ok) throw new Error("Executive Overview failed");
+
+const execJson = await execRes.json();
+if (!execJson?.section) {
+  throw new Error("Executive Overview missing 'section'");
+}
+
+const executiveOverviewSection = execJson.section;
+
+// Remove old EO from Part1
+const filteredPart1Sections = part1.sectionsPart1.filter(
+  (sec: any) => sec.id !== "executive-overview"
+);
+
+
+
       if (!part1?.meta || !Array.isArray(part1.sectionsPart1)) {
         throw new Error("Part 1 response missing sections/meta");
       }
@@ -206,15 +233,17 @@ async function goNext() {
       }
 
       // ================== MERGE ALL PARTS ==================
-      const blueprint: BusinessBlueprint = {
-        meta: part1.meta,
-        sections: [
-          ...part1.sectionsPart1,
-          ...part2.sectionsPart2,
-          ...part3.sectionsPart3,
-        ],
-        globalChecklist: part3.globalChecklist,
-      };
+   const blueprint: BusinessBlueprint = {
+  meta: part1.meta,
+  sections: [
+    executiveOverviewSection,     // NEW version FIRST
+    ...filteredPart1Sections,     // founder-fit + business-model
+    ...part2.sectionsPart2,
+    ...part3.sectionsPart3,
+  ],
+  globalChecklist: part3.globalChecklist,
+};
+
 
       // ================== SAVE BLUEPRINT ==================
       let id = Date.now().toString();
