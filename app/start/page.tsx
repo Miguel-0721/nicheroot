@@ -1,214 +1,128 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import Image from "next/image";
-import { motion } from "framer-motion";
 
-const placeholders = [
-  "Tell us about your time, money, and what you want your life to look like...",
-  "What does your current schedule and income situation look like?",
-  "How much time and money can you realistically put into a new business?",
-  "What are you trying to fix or improve in your life with this business?",
-  "What would a “good” outcome from this business look like for you?",
+const EXAMPLES = [
+  "I want an online business I can start with under €500. I can do 5–8 hours per week. I’m open to learning new skills.",
+  "I want a scalable digital business that could reach €5k/month within a year. I prefer online tools or services.",
+  "I want something low-risk and simple. I have basic tech skills and enjoy research, writing, and problem-solving.",
 ];
 
 export default function StartPage() {
   const router = useRouter();
+  const [text, setText] = useState("");
 
-  const [placeholder, setPlaceholder] = useState(placeholders[0]);
-  const [userInput, setUserInput] = useState("");
-  const [hasTyped, setHasTyped] = useState(false);
+  const charCount = text.length;
+  const canContinue = useMemo(() => text.trim().length >= 30, [text]);
 
-  // Rotate placeholder text (only while user hasn't typed yet)
-  useEffect(() => {
-    if (hasTyped) return;
+  function onUseExample(example: string) {
+    setText(example);
+  }
 
-    let i = 0;
-    const interval = setInterval(() => {
-      i = (i + 1) % placeholders.length;
-      setPlaceholder(placeholders[i]);
-    }, 3200);
+  function onContinue() {
+    const payload = {
+      onboardingText: text.trim(),
+      createdAt: Date.now(),
+    };
 
-    return () => clearInterval(interval);
-  }, [hasTyped]);
-
-  const trimmed = userInput.trim();
-  const disabled = trimmed.length < 20; // simple guard so people write at least a bit
-
-  const handleStart = () => {
-    if (disabled) return;
-
-    if (typeof window !== "undefined") {
-      localStorage.setItem("nicheroot_userInput", trimmed);
+    try {
+      localStorage.setItem(
+        "nicheroot_v2_onboarding",
+        JSON.stringify(payload)
+      );
+    } catch {
+      // fail silently
     }
-    router.push("/questions");
-  };
+
+    router.push("/explore");
+  }
 
   return (
-    <main className="min-h-screen bg-[var(--background)] text-gray-900">
-      <div className="mx-auto flex min-h-screen max-w-6xl flex-col gap-10 px-4 pb-16 pt-24 md:flex-row md:items-start md:pt-28">
-        {/* LEFT: TEXT + TEXTAREA */}
-        <motion.section
-          initial={{ opacity: 0, x: -18 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.45 }}
-          className="flex-1"
-        >
-          {/* Small breadcrumb / badge */}
-          <div className="mb-6 inline-flex items-center gap-2 rounded-full bg-indigo-50 px-4 py-1 text-xs font-semibold text-[var(--brand-500)]">
-            <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[var(--brand-500)] text-[10px] font-bold text-white">
-              NR
-            </span>
-            <span>NicheRoot Decision Flow</span>
+    <main className="min-h-screen bg-white">
+      <div className="mx-auto max-w-3xl px-6 py-16">
+        {/* Header */}
+        <div className="mb-8">
+          <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs text-gray-600">
+            <span className="h-2 w-2 rounded-full bg-emerald-500" />
+            NicheRoot v2 • Business Idea Explorer
           </div>
 
-          {/* Title */}
-          <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
-            Tell us about your{" "}
-            <span className="text-[var(--brand-500)]">real situation</span>
+          <h1 className="mt-6 text-3xl font-semibold tracking-tight text-gray-900 sm:text-4xl">
+            Tell me what you’re looking for
           </h1>
 
-          <p className="mt-4 max-w-xl text-sm leading-relaxed text-gray-600 sm:text-base">
-            This isn&apos;t a generic idea list. NicheRoot uses your story,
-            constraints, and goals to suggest a business direction that can
-            actually fit your time, money, and energy.
-          </p>
-
-          {/* Textarea */}
-          <div className="mt-8">
-            <label
-              htmlFor="context"
-              className="mb-2 block text-xs font-semibold uppercase tracking-wide text-gray-500"
-            >
-              Your context
-            </label>
-            <textarea
-              id="context"
-              rows={7}
-              className="w-full rounded-2xl border border-gray-200 bg-white/90 px-4 py-3 text-sm text-gray-900 shadow-sm outline-none ring-0 transition focus:border-[var(--brand-500)] focus:shadow-[0_18px_45px_rgba(88,80,236,0.15)]"
-              placeholder={placeholder}
-              value={userInput}
-              onChange={(e) => {
-                setUserInput(e.target.value);
-                if (!hasTyped) setHasTyped(true);
-              }}
-            />
-
-            <p className="mt-2 text-xs text-gray-500">
-              1–2 paragraphs is enough. The more honest you are about your time,
-              money, and energy, the better your recommendations.
-            </p>
-          </div>
-
-          {/* CTA */}
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <button
-              onClick={handleStart}
-              disabled={disabled}
-              className={`inline-flex items-center justify-center rounded-full px-8 py-3 text-sm font-semibold shadow-md transition-all
-              ${
-                disabled
-                  ? "cursor-not-allowed bg-gray-300 text-gray-100 opacity-80 shadow-none pointer-events-none"
-                  : "bg-[var(--brand-500)] text-white hover:bg-[var(--brand-400)] hover:shadow-[0_18px_45px_rgba(88,80,236,0.25)]"
-              }`}
-            >
-              Start the 6 trade-off questions
-            </button>
-            <p className="text-xs text-gray-500">
-              You can always refine your answers later. This just gives NicheRoot
-              a starting snapshot.
-            </p>
-          </div>
-        </motion.section>
-
-        {/* RIGHT: EXPLANATION / ILLUSTRATION */}
-        <motion.aside
-          initial={{ opacity: 0, x: 18 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.45, delay: 0.05 }}
-          className="flex-1 rounded-3xl border border-gray-100 bg-gradient-to-b from-white to-[#fafaff] p-5 shadow-lg ring-1 ring-black/5 sm:p-6 md:p-8"
-        >
-          <div className="mb-4 text-xs font-semibold uppercase tracking-wide text-gray-500">
-            How this works
-          </div>
-
-          <p className="text-sm text-gray-700">
-            We&apos;ll turn your story into{" "}
-            <span className="font-semibold text-[var(--brand-500)]">
-              6 smart A/B questions
+          <p className="mt-3 text-base leading-7 text-gray-600">
+            Describe your goals, budget, skills, and time. I’ll generate{" "}
+            <span className="font-medium text-gray-900">
+              100 business ideas
             </span>{" "}
-            that gradually narrow down the business model that fits your life,
-            not just what looks good on paper.
+            and help you narrow down the best ones.
+          </p>
+        </div>
+
+        {/* Input box */}
+        <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+          <label className="mb-2 block text-sm font-medium text-gray-900">
+            Your situation
+          </label>
+
+          <textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder="Example: I want an online business with low startup costs. I can work evenings and weekends. I like learning, organizing ideas, and building things long-term."
+            className="h-40 w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-[15px] leading-6 text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-300"
+          />
+
+          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div className="text-xs text-gray-500">
+              {charCount} characters •{" "}
+              <span className={canContinue ? "text-emerald-600" : ""}>
+                minimum 30 recommended
+              </span>
+            </div>
+
+            <button
+              onClick={onContinue}
+              disabled={!canContinue}
+              className={`rounded-xl px-4 py-2 text-sm font-semibold transition
+                ${
+                  canContinue
+                    ? "bg-gray-900 text-white hover:bg-gray-800"
+                    : "cursor-not-allowed bg-gray-200 text-gray-500"
+                }`}
+            >
+              Explore ideas →
+            </button>
+          </div>
+        </div>
+
+        {/* Examples */}
+        <div className="mt-8">
+          <h2 className="text-sm font-semibold text-gray-900">
+            Need inspiration?
+          </h2>
+          <p className="mt-1 text-sm text-gray-600">
+            Click an example to autofill, then edit it.
           </p>
 
-          <ol className="mt-6 space-y-4 text-sm text-gray-700">
-            <li className="flex gap-3">
-              <span className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-indigo-50 text-xs font-semibold text-[var(--brand-500)]">
-                1
-              </span>
-              <div>
-                <div className="font-semibold text-gray-900">
-                  You describe your time, money, and goals.
-                </div>
-                <p className="text-xs text-gray-600">
-                  Mention your schedule, financial reality, and what you want
-                  this business to change.
-                </p>
-              </div>
-            </li>
-            <li className="flex gap-3">
-              <span className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-indigo-50 text-xs font-semibold text-[var(--brand-500)]">
-                2
-              </span>
-              <div>
-                <div className="font-semibold text-gray-900">
-                  NicheRoot asks 6 targeted trade-off questions.
-                </div>
-                <p className="text-xs text-gray-600">
-                  Each question helps narrow down which models make sense for
-                  your time, risk tolerance, and energy.
-                </p>
-              </div>
-            </li>
-            <li className="flex gap-3">
-              <span className="mt-0.5 flex h-6 w-6 items-center justify-center rounded-full bg-indigo-50 text-xs font-semibold text-[var(--brand-500)]">
-                3
-              </span>
-              <div>
-                <div className="font-semibold text-gray-900">
-                  You get a personalized business blueprint.
-                </div>
-                <p className="text-xs text-gray-600">
-                  Clear direction, one main model, and concrete next steps you
-                  can actually execute.
-                </p>
-              </div>
-            </li>
-          </ol>
-
-          <div className="mt-7 rounded-2xl bg-indigo-50/80 p-4 text-xs text-gray-700">
-            <div className="mb-1 text-[11px] font-semibold uppercase tracking-wide text-[var(--brand-500)]">
-              Tip for better results
-            </div>
-            <p>
-              Mention your work schedule, income needs, risk comfort, and any
-              skills you already have. That&apos;s what makes your blueprint feel{" "}
-              <span className="font-semibold">tailored</span> instead of generic.
-            </p>
+          <div className="mt-3 grid gap-3">
+            {EXAMPLES.map((example, i) => (
+              <button
+                key={i}
+                onClick={() => onUseExample(example)}
+                className="rounded-2xl border border-gray-200 bg-white p-4 text-left text-sm text-gray-700 shadow-sm transition hover:border-gray-300 hover:bg-gray-50"
+              >
+                {example}
+              </button>
+            ))}
           </div>
 
-          <div className="mt-6 flex items-center justify-center">
-            <Image
-              src="/flowchart2.png"
-              alt="NicheRoot decision flow illustration"
-              width={360}
-              height={360}
-              className="max-h-[260px] w-auto object-contain drop-shadow-lg"
-              priority
-            />
+          <div className="mt-8 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
+            <span className="font-semibold">Tip:</span> The more specific you are
+            about budget, time, and skills, the better your results.
           </div>
-        </motion.aside>
+        </div>
       </div>
     </main>
   );
