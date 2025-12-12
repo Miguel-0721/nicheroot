@@ -153,17 +153,57 @@ const userContext =
 
         {/* Main content */}
         <main className="col-span-6 space-y-6">
-          {activeSection && (
-            <section className="bg-white rounded-xl border p-6">
-              <p className="text-xs uppercase text-gray-400 mb-2">
-                {activeSection.title}
-              </p>
+       {activeSection && (
+  <section className="bg-white rounded-xl border p-6 space-y-5">
+    <p className="text-xs uppercase text-gray-400">
+      {activeSection.title}
+    </p>
 
-              {activeSection.id === "executive-overview" && (
-                <h2 className="text-2xl font-semibold mb-3">
-                  {blueprint.meta.nicheTitle}
-                </h2>
-              )}
+    {/* Executive Overview Header */}
+    {activeSection.id === "executive-overview" && (
+      <>
+        <h2 className="text-2xl font-semibold">
+          {blueprint.meta.nicheTitle}
+        </h2>
+
+        <div className="rounded-lg bg-blue-50 border border-blue-100 p-4 text-sm text-blue-900">
+          <p className="font-medium mb-1">
+            Why this business makes sense for you
+          </p>
+          <p className="text-blue-800">
+            This blueprint is tailored to your situation, focusing on realistic
+            execution, manageable risk, and fast validation instead of theory.
+          </p>
+        </div>
+
+        {/* Meta highlights */}
+        <div className="grid grid-cols-3 gap-3 text-sm">
+          {blueprint.meta.difficulty && (
+            <div className="rounded-lg border bg-gray-50 p-3">
+              <p className="text-xs text-gray-500">Difficulty</p>
+              <p className="font-medium">{blueprint.meta.difficulty}</p>
+            </div>
+          )}
+
+          {blueprint.meta.startupCost && (
+            <div className="rounded-lg border bg-gray-50 p-3">
+              <p className="text-xs text-gray-500">Startup cost</p>
+              <p className="font-medium">{blueprint.meta.startupCost}</p>
+            </div>
+          )}
+
+          {blueprint.meta.expectedTimeline && (
+            <div className="rounded-lg border bg-gray-50 p-3">
+              <p className="text-xs text-gray-500">Time to validate</p>
+              <p className="font-medium">
+                {blueprint.meta.expectedTimeline}
+              </p>
+            </div>
+          )}
+        </div>
+      </>
+    )}
+
 
               <div className="space-y-4 text-sm text-gray-700">
                 {activeSection.content.paragraphs?.map((p, i) => (
