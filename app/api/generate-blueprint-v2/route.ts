@@ -131,6 +131,28 @@ Do NOT add, remove, rename, or reorder sections.
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 SECTION RULES
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SPECIAL RULE FOR SECTION 3 (Problem & Market Reality):
+
+This section MUST clearly define:
+- A specific target user (not "people" or "consumers")
+- A concrete, recurring problem they face
+- Why existing solutions do NOT fully solve this problem
+
+Avoid vague phrases like:
+- "many people"
+- "consumers are overwhelmed"
+- "there is a lot of information"
+
+The problem must feel:
+- Specific
+- Observable
+- Testable in real life
+
+The target user MUST be described in a way that allows
+a human to identify or reach them without guesswork
+(e.g. job role, situation, or context).
+
+
 
 GENERAL:
 - Write in clear, calm, professional language
