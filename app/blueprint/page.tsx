@@ -1,7 +1,6 @@
 "use client";
 import ReactMarkdown from "react-markdown";
 import { motion } from "framer-motion";
-
 import { useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import type {
@@ -12,6 +11,7 @@ import type {
   DiagramBlock,
 } from "@/types/blueprint-types";
 
+import type { BlueprintIdea } from "@/types/idea";
 import {
   ResponsiveContainer,
   LineChart,
@@ -73,13 +73,32 @@ function HoverTooltip({ text, color }: { text: string; color: string }) {
   const [blueprint, setBlueprint] = useState<BusinessBlueprint | null>(null);
   const [activeTab, setActiveTab] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
+  const [activeIdea, setActiveIdea] = useState<BlueprintIdea | null>(null);
   const [savedList, setSavedList] = useState<SavedBlueprint[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
 
+
+  
   /* ---------------- LOAD FROM LOCALSTORAGE BY ID ---------------- */
+  
+  // 🔹 Load active idea immediately (Explore → Blueprint)
+useEffect(() => {
+  const raw = sessionStorage.getItem("nicheroot_active_idea");
+  if (!raw) return;
+
+  try {
+    setActiveIdea(JSON.parse(raw));
+  } catch {
+    console.warn("Invalid active idea in sessionStorage");
+  }
+}, []);
+
+  
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+
+    
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
       const parsed: SavedBlueprint[] = raw ? JSON.parse(raw) : [];
@@ -133,8 +152,71 @@ function HoverTooltip({ text, color }: { text: string; color: string }) {
       setActiveTab(null);
     }
 
+
+// 🔹 If no saved blueprint exists BUT we have an active idea,
+// we will generate a new blueprint (handled next step)
+
+
+
     setLoading(false);
   }, [searchParams]);
+
+// 🔹 Generate blueprint from active idea (Explore → Blueprint)
+useEffect(() => {
+  if (!activeIdea) return;
+  if (blueprint) return;
+
+  const idea = activeIdea; // ✅ snapshot (now TypeScript knows it's not null)
+
+  async function generateFromIdea() {
+    setLoading(true);
+
+    try {
+      const res = await fetch("/api/generate-blueprint", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          idea, // ✅ use snapshot
+          source: "explore",
+        }),
+      });
+
+      const data = await res.json();
+
+      const newSaved = {
+        id: String(Date.now()),
+        createdAt: new Date().toISOString(),
+        label: idea.name, // ✅ use snapshot
+        data,
+      };
+
+      const raw = localStorage.getItem(STORAGE_KEY);
+      const existing = raw ? JSON.parse(raw) : [];
+      const updated = [...existing, newSaved];
+
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+      setBlueprint(data);
+      setCurrentId(newSaved.id);
+
+      if (data.sections?.length > 0) {
+        setActiveTab(data.sections[0].id);
+      }
+
+      sessionStorage.removeItem("nicheroot_active_idea");
+      sessionStorage.removeItem("nicheroot_user_context");
+    } catch (e) {
+      console.error("Blueprint generation failed", e);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  generateFromIdea();
+}, [activeIdea, blueprint]);
+
+
+
 
   /* ---------------- DISPLAY NAME ---------------- */
 const displayName = useMemo(() => {

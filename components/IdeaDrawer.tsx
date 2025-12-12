@@ -2,23 +2,15 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
-type Idea = {
-  id: string;
-  name: string;
-  category: string;
-  difficulty: string;
-  demand: string;
-  score?: number;
-  signal?: "Gold" | "Silver" | "Bronze";
-  locked?: boolean;
-};
+import type { BlueprintIdea } from "@/types/idea";
 
 type Props = {
-  idea: Idea | null;
+  idea: BlueprintIdea | null;
   open: boolean;
   onClose: () => void;
   userContext?: string | null;
 };
+
 
 
 export default function IdeaDrawer({ idea, open, onClose, userContext }: Props) {
