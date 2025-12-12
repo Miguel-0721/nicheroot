@@ -166,7 +166,8 @@ export default function IdeaDrawer({ idea, open, onClose, userContext }: Props) 
       JSON.stringify(idea)
     );
 
-    window.location.href = "/blueprint";
+    window.location.href = "/blueprint-v2";
+
   }}
   className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-700 transition"
 >
@@ -194,7 +195,8 @@ export default function IdeaDrawer({ idea, open, onClose, userContext }: Props) 
     }
 
     // Go to blueprint page
-    window.location.href = "/blueprint";
+   window.location.href = "/blueprint-v2";
+
   }}
   className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-500"
 >

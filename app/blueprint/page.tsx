@@ -39,6 +39,7 @@ type SavedBlueprint = {
 };
 
 const STORAGE_KEY = "nicheroot_blueprints_v2";
+const GENERATING_KEY = "nicheroot_generating_blueprint";
 
 export default function BlueprintPage() {
   const searchParams = useSearchParams();
@@ -76,144 +77,146 @@ function HoverTooltip({ text, color }: { text: string; color: string }) {
   const [activeIdea, setActiveIdea] = useState<BlueprintIdea | null>(null);
   const [savedList, setSavedList] = useState<SavedBlueprint[]>([]);
   const [currentId, setCurrentId] = useState<string | null>(null);
+  
 
 
   
   /* ---------------- LOAD FROM LOCALSTORAGE BY ID ---------------- */
   
-  // 🔹 Load active idea immediately (Explore → Blueprint)
+// 🔹 Load active idea immediately (Explore → Blueprint)
 useEffect(() => {
   const raw = sessionStorage.getItem("nicheroot_active_idea");
   if (!raw) return;
 
   try {
     setActiveIdea(JSON.parse(raw));
+
+
+    setBlueprint(null);      // ⬅️ ADD THIS
+    setCurrentId(null);      // ⬅️ ADD THIS
+    setActiveTab(null);      // ⬅️ ADD THIS
+
+    // ✅ force loading immediately so old blueprints never flash
+    setLoading(true);
   } catch {
     console.warn("Invalid active idea in sessionStorage");
   }
 }, []);
 
+
   
-  useEffect(() => {
-    if (typeof window === "undefined") return;
+useEffect(() => {
+  if (typeof window === "undefined") return;
 
+  // 🚫 HARD BLOCK: Explore → Blueprint mode
+  if (sessionStorage.getItem("nicheroot_active_idea")) {
+    return; // ⬅️ DO NOTHING AT ALL
+  }
 
-    
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      const parsed: SavedBlueprint[] = raw ? JSON.parse(raw) : [];
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const parsed: SavedBlueprint[] = raw ? JSON.parse(raw) : [];
 
-      // Keep only v2 blueprints (with meta + sections)
-      const valid = parsed.filter(
-        (b) =>
-          b &&
-          b.data &&
-          (b.data as any).meta &&
-          Array.isArray((b.data as any).sections)
-      );
+    const valid = parsed.filter(
+      (b) =>
+        b &&
+        b.data &&
+        (b.data as any).meta &&
+        Array.isArray((b.data as any).sections)
+    );
 
-      setSavedList(valid);
+    setSavedList(valid);
 
-      const idFromUrl = searchParams.get("id");
+    const idFromUrl = searchParams.get("id");
 
-      if (idFromUrl) {
-        const found = valid.find((b) => b.id === idFromUrl);
-        if (found) {
-          setBlueprint(found.data);
-          (window as any).__blueprint = found.data;
-
-          setCurrentId(found.id);
-          if (found.data.sections?.length > 0) {
-            setActiveTab(found.data.sections[0].id);
-          } else {
-            setActiveTab("checklist");
-          }
-        } else {
-          setBlueprint(null);
-          setActiveTab(null);
-        }
-      } else if (valid.length > 0) {
-        // fallback: last blueprint
-        const last = valid[valid.length - 1];
-        setBlueprint(last.data);
-        setCurrentId(last.id);
-        if (last.data.sections?.length > 0) {
-          setActiveTab(last.data.sections[0].id);
-        } else {
-          setActiveTab("checklist");
-        }
-      } else {
-        setBlueprint(null);
-        setActiveTab(null);
+    if (idFromUrl) {
+      const found = valid.find((b) => b.id === idFromUrl);
+      if (found) {
+        setBlueprint(found.data);
+        setCurrentId(found.id);
+        setActiveTab(found.data.sections?.[0]?.id ?? "checklist");
       }
-    } catch (e) {
-      console.error("Failed to load blueprints from localStorage:", e);
-      setBlueprint(null);
-      setActiveTab(null);
+    } else if (valid.length > 0) {
+      const last = valid[valid.length - 1];
+      setBlueprint(last.data);
+      setCurrentId(last.id);
+      setActiveTab(last.data.sections?.[0]?.id ?? "checklist");
     }
-
-
-// 🔹 If no saved blueprint exists BUT we have an active idea,
-// we will generate a new blueprint (handled next step)
-
-
-
+  } catch (e) {
+    console.error("Failed to load blueprints", e);
+  } finally {
     setLoading(false);
-  }, [searchParams]);
+  }
+}, [searchParams]);
+
+
+
 
 // 🔹 Generate blueprint from active idea (Explore → Blueprint)
 useEffect(() => {
   if (!activeIdea) return;
   if (blueprint) return;
 
-  const idea = activeIdea; // ✅ snapshot (now TypeScript knows it's not null)
+  // 🔒 Prevent duplicate generation
+  if (sessionStorage.getItem(GENERATING_KEY)) {
+    return;
+  }
+
+  const idea = activeIdea; // ✅ ADD THIS LINE
 
   async function generateFromIdea() {
+    sessionStorage.setItem(GENERATING_KEY, "true");
     setLoading(true);
 
-    try {
-      const res = await fetch("/api/generate-blueprint", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          idea, // ✅ use snapshot
-          source: "explore",
-        }),
-      });
 
-      const data = await res.json();
+   try {
+  const res = await fetch("/api/generate-blueprint", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      idea: activeIdea,
+      source: "explore",
+    }),
+  });
 
-      const newSaved = {
-        id: String(Date.now()),
-        createdAt: new Date().toISOString(),
-        label: idea.name, // ✅ use snapshot
-        data,
-      };
+  const data = await res.json();
 
-      const raw = localStorage.getItem(STORAGE_KEY);
-      const existing = raw ? JSON.parse(raw) : [];
-      const updated = [...existing, newSaved];
+const newSaved = {
+  id: String(Date.now()),
+  createdAt: new Date().toISOString(),
+  label: idea.name, // ✅ use captured value
+  data,
+};
 
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  const raw = localStorage.getItem(STORAGE_KEY);
+  const existing = raw ? JSON.parse(raw) : [];
+  const updated = [...existing, newSaved];
 
-      setBlueprint(data);
-      setCurrentId(newSaved.id);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
 
-      if (data.sections?.length > 0) {
-        setActiveTab(data.sections[0].id);
-      }
+  setBlueprint(data);
+  setCurrentId(newSaved.id);
 
-      sessionStorage.removeItem("nicheroot_active_idea");
-      sessionStorage.removeItem("nicheroot_user_context");
-    } catch (e) {
-      console.error("Blueprint generation failed", e);
-    } finally {
-      setLoading(false);
-    }
+  if (data.sections?.length > 0) {
+    setActiveTab(data.sections[0].id);
+  }
+
+  sessionStorage.removeItem("nicheroot_active_idea");
+} catch (e) {
+  console.error("Blueprint generation failed", e);
+} finally {
+  sessionStorage.removeItem(GENERATING_KEY);
+  setActiveIdea(null);
+  setLoading(false);
+}
+
+
+
   }
 
   generateFromIdea();
 }, [activeIdea, blueprint]);
+
 
 
 
@@ -363,21 +366,28 @@ This score is based on your personal inputs + financial assumptions for the mode
   
   // Build tabs dynamically from sections + checklist
 
-if (!blueprint || !blueprint.sections || !Array.isArray(blueprint.sections)) {
+if (!blueprint) {
+  if (loading) return null; // ⬅️ prevent error during generation
   return (
     <main className="min-h-screen bg-[var(--background)] pt-24 px-6">
       <p className="text-sm text-red-500">
-        Invalid blueprint format. Please generate a new blueprint.
+        No blueprint available. Please generate a new one.
       </p>
     </main>
   );
 }
 
- const sectionTabs = blueprint.sections.map((section) => ({
-  id: section.id,
-  label: section.title,
-  icon: iconForSection(section.id),
-}));
+console.log("sections at render", blueprint.sections);
+
+
+ const sectionTabs = Array.isArray(blueprint.sections)
+  ? blueprint.sections.map((section) => ({
+      id: section.id,
+      label: section.title,
+      icon: iconForSection(section.id),
+    }))
+  : [];
+
 
   const allTabs = [
     ...sectionTabs,
@@ -385,13 +395,22 @@ if (!blueprint || !blueprint.sections || !Array.isArray(blueprint.sections)) {
   ];
 
   /* ---------------- LOADING / EMPTY ---------------- */
-  if (loading) {
-    return (
-      <main className="min-h-screen bg-[var(--background)] pt-24 px-6">
-        <p className="text-sm text-gray-500">Loading…</p>
-      </main>
-    );
-  }
+if (loading) {
+  return (
+    <main className="min-h-screen flex items-center justify-center bg-[var(--background)] px-6">
+      <div className="flex flex-col items-center gap-4 text-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-gray-300 border-t-[var(--brand-500)]" />
+        <p className="text-sm font-medium text-gray-700">
+          Generating your personalized business blueprint
+        </p>
+        <p className="text-xs text-gray-500 max-w-xs">
+          This may take up to 20 seconds. We’re analyzing your idea deeply.
+        </p>
+      </div>
+    </main>
+  );
+}
+
 
   if (!blueprint) {
     return (
@@ -438,9 +457,15 @@ if (!blueprint || !blueprint.sections || !Array.isArray(blueprint.sections)) {
     {displayName}
   </h1>
 
-  <p className="text-[15px] text-gray-600 max-w-xl leading-relaxed">
-    Generated from your constraints, goals, and trade-offs.
-  </p>
+<p className="text-[15px] text-gray-600 max-w-xl leading-relaxed">
+  Generated from your constraints, goals, and trade-offs.
+  {activeIdea?.name && (
+    <span className="block mt-1 text-[13px] text-gray-500">
+      Based on idea: <span className="font-medium">{activeIdea.name}</span>
+    </span>
+  )}
+</p>
+
 </div>
 
 

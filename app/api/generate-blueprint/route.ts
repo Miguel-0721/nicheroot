@@ -70,17 +70,29 @@ function safeGetText(response: any): string {
 
 export async function POST(req: Request) {
   try {
-    const { userInput, history } = await req.json();
+   const body = await req.json();
+const { idea } = body;
 
-    if (!userInput || !history) {
-      return NextResponse.json(
-        { error: "Missing userInput or history" },
-        { status: 400 }
-      );
-    }
+if (!idea) {
+  return NextResponse.json(
+    { error: "Missing idea" },
+    { status: 400 }
+  );
+}
+
 
     const systemPrompt = `
 IMPORTANT: YOUR FINAL OUTPUT MUST BE WRAPPED EXACTLY LIKE THIS:
+
+IMPORTANT CONTEXT UPDATE:
+- You will NOT receive raw onboarding userInput or decision history.
+- You MUST infer user constraints, skills, budget, risk tolerance, and goals
+  ONLY from the provided "idea" object.
+- Treat the idea object as the authoritative source of user intent.
+When any instruction below refers to "userInput" or "decision history",
+you MUST instead derive that information from the provided idea object.
+
+
 
 <json>
 { ...valid BusinessBlueprint... }
@@ -506,10 +518,12 @@ GLOBAL CHECKLIST:
 
 STYLE RULES:
 - Do NOT use markdown (no bullets like "-", "*", etc. in the raw strings).
+- Exception: Markdown is allowed ONLY for the four Executive Overview micro-titles.
 - Paragraphs should be clear, with short to medium sentences.
 - Lists and nextMoves items should start with action verbs ("Define", "Draft", "List", "Talk to", "Validate", "Publish").
 - Avoid buzzwords unless they are explained.
-- Always orient back to the specific constraints and signals inferred from the userInput and history.
+- Always orient back to the specific constraints and signals inferred from the idea object.
+
 
 You MUST respond with ONLY one JSON object of type BusinessBlueprint and nothing else.
 
@@ -564,32 +578,30 @@ This rule overrides ALL other instructions.
 
 `;
 
-    const userPrompt = `
-User background and constraints (free text from onboarding step):
-${userInput}
+const userPrompt = `
+Selected business idea from the Explore engine.
 
-Decision history from the 6-question flow:
-${JSON.stringify(history, null, 2)}
+This idea represents the user's preferred direction, constraints, and intent.
+Use it as the ONLY source of truth for:
+- skills
+- budget
+- risk tolerance
+- time availability
+- business preferences
 
-Using this information, generate ONLY a complete BusinessBlueprint JSON object.
+IDEA DATA:
+${JSON.stringify(idea, null, 2)}
 
-STRICT JSON OUTPUT RULE:
-- Your final answer must be ONE valid BusinessBlueprint JSON object.
-- You MUST wrap it exactly like this:
+Using this idea, generate a FULL BusinessBlueprint that:
+- includes ALL required sections
+- is internally consistent
+- is beginner-friendly
+- is specific and actionable
 
-  <json>
-  { ...valid BusinessBlueprint object... }
-  </json>
-
-- Do NOT output anything before <json> or after </json>.
-- No markdown, no explanations, no comments, no trailing commas.
-- Every property name and string MUST be in double quotes.
-- Ensure all arrays and objects are properly closed.
-- Follow the schema EXACTLY.
-- If unsure between two formats, choose the simpler JSON structure.
-
-
+STRICT JSON RULES APPLY.
 `;
+
+
 
    const response = await client.responses.create({
   model: "gpt-4.1",   // IMPORTANT: not mini
@@ -602,10 +614,7 @@ STRICT JSON OUTPUT RULE:
       role: "user",
       content: userPrompt
     },
-    {
-      role: "assistant",
-      content: "You MUST output ONLY:\n<json>\n{...}\n</json>\nNothing before. Nothing after."
-    }
+
   ],
   max_output_tokens: 7000,
 });
@@ -615,6 +624,11 @@ STRICT JSON OUTPUT RULE:
     console.log("BLUEPRINT RAW V2:", raw);
 
     const parsed = extractFirstJson(raw) as BusinessBlueprint;
+
+if (!parsed?.sections || parsed.sections.length === 0) {
+  throw new Error("Blueprint generated without sections");
+}
+
 
     return NextResponse.json(parsed);
   } catch (err: any) {
