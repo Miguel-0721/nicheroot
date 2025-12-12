@@ -88,6 +88,26 @@ const MOCK_IDEAS: Idea[] = [
   })),
 ];
 
+function generateSessionIdeas(): Idea[] {
+  const unlocked = MOCK_IDEAS.filter((i) => !i.locked);
+  const locked = MOCK_IDEAS.filter((i) => i.locked);
+
+  // Slight shuffle + score variance
+  const randomized = unlocked
+    .map((idea) => ({
+      ...idea,
+      score: Math.max(
+        50,
+        Math.min(95, idea.score + Math.floor(Math.random() * 11 - 5))
+      ),
+    }))
+    .sort(() => Math.random() - 0.5);
+
+  return [...randomized, ...locked];
+}
+
+
+
 export default function ExplorePage() {
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [category, setCategory] = useState("All");
@@ -105,10 +125,29 @@ const resetSelection = () => {
   setDrawerOpen(false);
 };
 
+const triggerAssistantThinking = () => {
+  setAssistantThinking(true);
+  setTimeout(() => {
+    setAssistantThinking(false);
+  }, 400);
+};
 
 
   useEffect(() => {
-    setIdeas(MOCK_IDEAS);
+    const stored = sessionStorage.getItem("nicheroot_explore_ideas");
+
+if (stored) {
+  setIdeas(JSON.parse(stored));
+} else {
+  const generated = generateSessionIdeas();
+  setIdeas(generated);
+  sessionStorage.setItem(
+    "nicheroot_explore_ideas",
+    JSON.stringify(generated)
+  );
+}
+
+
 
     // Read onboarding context from localStorage
     try {
@@ -122,6 +161,20 @@ const resetSelection = () => {
     } catch {
       // ignore storage errors
     }
+
+// 🔁 Restore previously selected idea (Step 2)
+const storedIdea = sessionStorage.getItem("nicheroot_selected_idea");
+
+if (storedIdea) {
+  const parsedIdea = JSON.parse(storedIdea) as Idea;
+  setSelectedIdea(parsedIdea);
+  setDrawerOpen(true);
+  setAssistantThinking(false); // ⬅️ important polish
+}
+
+
+
+
   }, []);
 
   const filteredIdeas = useMemo(() => {
@@ -222,6 +275,29 @@ const resetSelection = () => {
 
           {/* RIGHT: Table */}
           <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+
+<div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+  <div className="text-xs text-gray-500">
+    🧠 Generated for you this session
+  </div>
+
+  <button
+    onClick={() => {
+      setAssistantThinking(true);
+
+setTimeout(() => {
+  sessionStorage.removeItem("nicheroot_explore_ideas");
+  window.location.reload();
+}, 400);
+
+    }}
+    className="text-xs font-medium text-indigo-600 hover:underline"
+  >
+    Regenerate ideas
+  </button>
+</div>
+
+
             {/* Filters */}
             <div className="flex flex-wrap gap-3 border-b border-gray-100 px-4 py-3">
               <select
@@ -280,23 +356,28 @@ const resetSelection = () => {
   tabIndex={idea.locked ? -1 : 0}
 onClick={() => {
 
-if (drawerOpen) return;
+ if (drawerOpen) return; // ⬅️ ADD THIS
 
 
- if (idea.locked) {
-  setDrawerOpen(false);      // 👈 close drawer if open
-  setSelectedIdea(null);     // 👈 clear context
+if (idea.locked) {
+  setDrawerOpen(false);
+  setSelectedIdea(null);
+  setAssistantThinking(false);
   setUpgradeOpen(true);
   return;
 }
 
-  setAssistantThinking(true);
-  setSelectedIdea(idea);
-  setDrawerOpen(true);
 
-  setTimeout(() => {
-    setAssistantThinking(false);
-  }, 400);
+triggerAssistantThinking();
+setSelectedIdea(idea);
+setDrawerOpen(true);
+
+sessionStorage.setItem(
+  "nicheroot_selected_idea",
+  JSON.stringify(idea)
+);
+
+
 }}
 
 
@@ -309,22 +390,25 @@ if (drawerOpen) return;
     return;
   }
 
-  if (!idea.locked && e.key === "Enter") {
-    setAssistantThinking(true);
-    setSelectedIdea(idea);
-    setDrawerOpen(true);
+ if (!idea.locked && e.key === "Enter") {
+  triggerAssistantThinking();
+  setSelectedIdea(idea);
+  setDrawerOpen(true);
+}
 
-    setTimeout(() => {
-      setAssistantThinking(false);
-    }, 400);
-  }
 }}
 
 
-  className={`relative group border-t border-gray-100 hover:bg-gray-50 focus:outline-none focus:bg-indigo-50 ${
+className={`relative group border-t border-gray-100 focus:outline-none ${
+  idea.locked
+    ? "cursor-not-allowed opacity-60"
+    : "cursor-pointer hover:bg-gray-50"
+} ${
+  selectedIdea?.id === idea.id
+    ? "bg-indigo-50 ring-1 ring-indigo-200"
+    : ""
+}`}
 
-    idea.locked ? "cursor-not-allowed opacity-60" : "cursor-pointer"
-  }`}
 >
 
 
@@ -377,12 +461,25 @@ if (drawerOpen) return;
             </div>
 
             <div className="border-t border-gray-100 px-4 py-4">
-             <button
-  onClick={() => setUpgradeOpen(true)}
-  className="w-full rounded-xl bg-gray-900 px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800"
+         <button
+  disabled={assistantThinking}
+  onClick={() => {
+    setAssistantThinking(true);
+
+    setTimeout(() => {
+      setUpgradeOpen(true);
+      setAssistantThinking(false);
+    }, 400);
+  }}
+  className={`w-full rounded-xl px-4 py-2 text-sm font-semibold transition ${
+    assistantThinking
+      ? "bg-gray-400 cursor-not-allowed text-white"
+      : "bg-gray-900 text-white hover:bg-gray-800"
+  }`}
 >
-  Unlock all 100 ideas
+  {assistantThinking ? "Analyzing more ideas…" : "Unlock all 100 ideas"}
 </button>
+
 
             </div>
           </section>
@@ -410,7 +507,12 @@ if (drawerOpen) return;
             : null
         }
         open={drawerOpen}
-        onClose={() => setDrawerOpen(false)}
+        onClose={() => {
+  setDrawerOpen(false);
+  setSelectedIdea(null);
+  sessionStorage.removeItem("nicheroot_selected_idea");
+}}
+
         userContext={onboardingText}
       />
 

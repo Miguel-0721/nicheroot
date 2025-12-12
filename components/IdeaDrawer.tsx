@@ -42,13 +42,16 @@ export default function IdeaDrawer({ idea, open, onClose, userContext }: Props) 
 
           {/* Drawer */}
           <motion.aside
-            className="fixed right-0 top-0 z-50 h-full w-full max-w-md bg-white shadow-xl"
+            className="fixed right-0 top-0 z-50 h-full w-full max-w-md bg-white shadow-xl rounded-l-2xl"
+
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ type: "spring", damping: 22, stiffness: 260 }}
           >
-            <div className="flex h-full flex-col p-6">
+            <div className="flex h-full flex-col">
+
+
               {/* Header */}
               <div className="mb-4 flex items-start justify-between">
                 <div>
@@ -83,6 +86,12 @@ export default function IdeaDrawer({ idea, open, onClose, userContext }: Props) 
                 </div>
               )}
 
+{/* Scrollable content */}
+<div className="flex-1 overflow-y-auto px-6 pb-8 space-y-6 scroll-smooth">
+
+
+
+
               {/* Overview */}
               <div className="space-y-3 text-sm text-gray-700">
                 <p>
@@ -96,6 +105,22 @@ export default function IdeaDrawer({ idea, open, onClose, userContext }: Props) 
                   <li>Can be started part-time</li>
                 </ul>
               </div>
+
+{/* Confidence explanation */}
+<div className="mt-5 rounded-xl border border-indigo-100 bg-indigo-50 p-4">
+  <div className="mb-2 text-xs font-semibold uppercase tracking-wide text-indigo-700">
+    Why this idea ranks high for you
+  </div>
+
+  <ul className="list-disc space-y-1 pl-5 text-sm text-gray-700">
+    <li>Matches your available time and energy level</li>
+    <li>Requires skills you can realistically develop</li>
+    <li>Shows demand without extreme competition</li>
+    <li>Allows fast validation before committing fully</li>
+  </ul>
+</div>
+
+
 
 {/* Personal fit */}
 {userContext && (
@@ -131,21 +156,59 @@ export default function IdeaDrawer({ idea, open, onClose, userContext }: Props) 
   </div>
 )}
 
+</div> {/* 👈 CLOSE scrollable content HERE */}
 
-              {/* Spacer */}
-              <div className="flex-1" />
+              
 
-              {/* Actions */}
-              <div className="space-y-3">
+             {/* Actions */}
+<div className="border-t bg-white p-6 space-y-3 shadow-[0_-8px_24px_-12px_rgba(0,0,0,0.08)]">
+
+
                 {idea.locked ? (
-                  <button className="w-full rounded-xl bg-gray-900 px-4 py-3 text-sm font-semibold text-white">
-                    Unlock to view full blueprint
-                  </button>
+                <button
+  onClick={() => {
+    if (!idea) return;
+
+    sessionStorage.setItem(
+      "nicheroot_active_idea",
+      JSON.stringify(idea)
+    );
+
+    window.location.href = "/blueprint";
+  }}
+  className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-700 transition"
+>
+  Build my blueprint
+</button>
+
                 ) : (
                   <>
-                    <button className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-500">
-                      Generate full blueprint
-                    </button>
+                   <button
+  onClick={() => {
+    if (!idea) return;
+
+    // Save selected idea
+    sessionStorage.setItem(
+      "nicheroot_active_idea",
+      JSON.stringify(idea)
+    );
+
+    // Save user context (optional but important)
+    if (userContext) {
+      sessionStorage.setItem(
+        "nicheroot_user_context",
+        userContext
+      );
+    }
+
+    // Go to blueprint page
+    window.location.href = "/blueprint";
+  }}
+  className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-500"
+>
+  Generate full blueprint
+</button>
+
                     <button className="w-full rounded-xl border px-4 py-3 text-sm font-medium">
                       Save idea
                     </button>
