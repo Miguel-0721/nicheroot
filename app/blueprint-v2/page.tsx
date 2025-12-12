@@ -41,6 +41,8 @@ export default function BlueprintV2Page() {
 
   useEffect(() => {
     const raw = sessionStorage.getItem("nicheroot_active_idea");
+const userContext =
+  sessionStorage.getItem("nicheroot_user_context") || "";
 
     if (!raw) {
       setError("No idea selected. Please go back and select an idea.");
@@ -58,7 +60,11 @@ export default function BlueprintV2Page() {
 
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ idea }),
+          body: JSON.stringify({
+  idea,
+  userContext,
+}),
+
         });
 
         if (!res.ok) {

@@ -44,7 +44,8 @@ function safeGetText(response: any): string {
 
 export async function POST(req: Request) {
   try {
-    const { idea } = await req.json();
+    const { idea, userContext } = await req.json();
+
 
     if (!idea) {
       return NextResponse.json(
@@ -52,6 +53,18 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+
+const contextBlock =
+  userContext && userContext.trim().length > 0
+    ? `User context (important, tailor the blueprint to this person):
+${userContext}
+
+Use this information to adapt scope, difficulty, timelines, and advice.
+`
+    : "";
+
+
+
 
     const systemPrompt = `
 You are NicheRoot AI.
@@ -96,12 +109,14 @@ Schema:
 }
 `;
 
-    const userPrompt = `
+const userPrompt = `
+${contextBlock}
 Business idea:
 ${JSON.stringify(idea, null, 2)}
 
 Generate a concise but complete business blueprint.
 `;
+
 
     const response = await client.responses.create({
       model: "gpt-4.1",

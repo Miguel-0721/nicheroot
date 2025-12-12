@@ -29,6 +29,8 @@ const badgeStyles: Record<Badge, string> = {
   bronze: "bg-orange-100 text-orange-800",
   grey: "bg-gray-100 text-gray-400",
 };
+const PREVIEW_VISIBLE_COUNT = 5;
+
 
 const MOCK_IDEAS: Idea[] = [
   {
@@ -190,10 +192,25 @@ if (storedIdea) {
     });
   }, [ideas, category, difficulty, signal]);
 
+// We render all ideas, but visually lock anything after PREVIEW_VISIBLE_COUNT
+const previewIdeas = filteredIdeas;
+
+
+
+
   const assistantIntro = onboardingText
     ? `Based on what you shared, I focused on ideas that align with your time, budget, and goals.`
     : `You can start by exploring the ideas below. Add more context anytime to refine results.`;
 
+const visibleIdeasCount = Math.min(
+  ideas.filter((i) => !i.locked).length,
+  PREVIEW_VISIBLE_COUNT
+);
+
+
+const totalIdeasCount = ideas.length;
+
+const showLockedPreview = true;
   return (
     <main className="min-h-screen bg-white">
       <div className="mx-auto max-w-7xl px-6 py-10">
@@ -203,7 +220,7 @@ if (storedIdea) {
             Explore business ideas
           </h1>
           <p className="mt-1 text-sm text-gray-600">
-            Ranked ideas based on fit, demand, and execution difficulty.
+            Ranked ideas based on your situation, demand, and execution difficulty.
           </p>
         </div>
 
@@ -336,152 +353,212 @@ setTimeout(() => {
               </select>
             </div>
 
-            {/* Table */}
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
-                  <tr>
-                    <th className="px-4 py-3 text-left">Idea</th>
-                    <th className="px-4 py-3 text-left">Category</th>
-                    <th className="px-4 py-3 text-left">Difficulty</th>
-                    <th className="px-4 py-3 text-left">Demand</th>
-                    <th className="px-4 py-3 text-left">Score</th>
-                    <th className="px-4 py-3 text-left">Signal</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredIdeas.map((idea) => (
-       <tr
-  key={idea.id}
-  tabIndex={idea.locked ? -1 : 0}
-onClick={() => {
-
- if (drawerOpen) return; // ⬅️ ADD THIS
+<div className="flex flex-wrap gap-2 px-4 py-3 text-xs text-gray-600">
+  <span className="flex items-center gap-1">
+    <span className="h-2 w-2 rounded-full bg-amber-400" /> Gold = strongest fit
+  </span>
+  <span className="flex items-center gap-1">
+    <span className="h-2 w-2 rounded-full bg-gray-400" /> Silver = solid option
+  </span>
+  <span className="flex items-center gap-1">
+    <span className="h-2 w-2 rounded-full bg-orange-400" /> Bronze = niche / longer-term
+  </span>
+</div>
 
 
-if (idea.locked) {
-  setDrawerOpen(false);
-  setSelectedIdea(null);
-  setAssistantThinking(false);
-  setUpgradeOpen(true);
-  return;
-}
+{showLockedPreview && (
+  <div className="px-4 py-6 text-center text-sm text-gray-400 italic">
+    You’re seeing the top matches — unlock to view full details and rankings.
 
-
-triggerAssistantThinking();
-setSelectedIdea(idea);
-setDrawerOpen(true);
-
-sessionStorage.setItem(
-  "nicheroot_selected_idea",
-  JSON.stringify(idea)
-);
-
-
-}}
-
-
- onKeyDown={(e) => {
-
-if (drawerOpen) return;
-
-  if (idea.locked && e.key === "Enter") {
-    setUpgradeOpen(true);
-    return;
-  }
-
- if (!idea.locked && e.key === "Enter") {
-  triggerAssistantThinking();
-  setSelectedIdea(idea);
-  setDrawerOpen(true);
-}
-
-}}
-
-
-className={`relative group border-t border-gray-100 focus:outline-none ${
-  idea.locked
-    ? "cursor-not-allowed opacity-60"
-    : "cursor-pointer hover:bg-gray-50"
-} ${
-  selectedIdea?.id === idea.id
-    ? "bg-indigo-50 ring-1 ring-indigo-200"
-    : ""
-}`}
-
->
-
-
-                      <td className="px-4 py-3 font-medium text-gray-900">
-                        {idea.locked ? (
-                          <div className="h-4 w-40 rounded bg-gray-200 blur-sm" />
-                        ) : (
-                          idea.name
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">
-                        {idea.locked ? "—" : idea.category}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">
-                        {idea.locked ? "—" : idea.difficulty}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">
-                        {idea.locked ? "—" : idea.demand}
-                      </td>
-                      <td className="px-4 py-3 text-gray-600">
-                        {idea.locked ? "—" : idea.score}
-                      </td>
-                      <td className="px-4 py-3">
-                        <span
-                          className={`rounded-full px-2 py-1 text-xs font-semibold ${
-                            badgeStyles[idea.badge]
-                          }`}
-                        >
-                          {idea.locked
-                            ? "Locked"
-                            : idea.badge.charAt(0).toUpperCase() +
-                              idea.badge.slice(1)}
-                        </span>
-                      </td>
-{idea.locked && (
-  <div className="pointer-events-none absolute right-4 top-1/2 z-20 hidden -translate-y-1/2 rounded-lg bg-gray-900 px-3 py-2 text-xs text-white shadow-lg group-hover:block">
-    This idea requires deeper analysis.
-    <div className="mt-1 text-[11px] text-gray-300">
-      Unlock Pro to see full details.
-    </div>
   </div>
 )}
 
 
 
-                    </tr>
-                  ))}
-                </tbody>
+
+            {/* Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+               <thead className="bg-gray-50 text-xs uppercase tracking-wide text-gray-500">
+  <tr>
+    <th className="px-4 py-3 text-left">Idea</th>
+    <th className="px-4 py-3 text-left">Category</th>
+    <th className="px-4 py-3 text-left">Difficulty</th>
+    <th className="px-4 py-3 text-left">Demand</th>
+    <th className="px-4 py-3 text-left">Score</th>
+    <th className="px-4 py-3 text-left">Signal</th>
+  </tr>
+</thead>
+
+          <tbody>
+{previewIdeas.map((idea, index) => {
+const isBlurred = index >= PREVIEW_VISIBLE_COUNT || idea.locked;
+
+
+
+  return (
+    <tr
+      key={idea.id}
+      tabIndex={isBlurred ? -1 : 0}
+      onClick={() => {
+        if (drawerOpen || isBlurred) {
+          if (isBlurred) setUpgradeOpen(true);
+          return;
+        }
+
+        triggerAssistantThinking();
+        setSelectedIdea(idea);
+        setDrawerOpen(true);
+
+        sessionStorage.setItem(
+          "nicheroot_selected_idea",
+          JSON.stringify(idea)
+        );
+      }}
+      onKeyDown={(e) => {
+        if (drawerOpen || isBlurred) return;
+
+        if (e.key === "Enter") {
+          triggerAssistantThinking();
+          setSelectedIdea(idea);
+          setDrawerOpen(true);
+        }
+      }}
+      className={`relative group border-t border-gray-100 focus:outline-none ${
+isBlurred
+  ? "cursor-pointer select-none opacity-40 hover:opacity-50"
+  : "cursor-pointer hover:bg-gray-50"
+
+
+
+      } ${
+        !isBlurred && idea.badge === "gold"
+          ? "bg-gradient-to-r from-amber-50 to-white"
+          : ""
+      } ${
+        selectedIdea?.id === idea.id && !isBlurred
+          ? "bg-indigo-50 ring-1 ring-indigo-200"
+          : ""
+      }`}
+    >
+
+
+
+
+     <td className="relative px-4 py-3 font-medium text-gray-900">
+{isBlurred && (
+  <div className="absolute inset-0 flex items-center justify-center bg-white/75 backdrop-blur-sm">
+    <span className="flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-semibold text-gray-600 shadow-sm">
+      🔒 Unlock to view
+    </span>
+  </div>
+)}
+
+
+  {index === 0 && !isBlurred && (
+    <span className="mr-2 inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-semibold text-indigo-700">
+      #1 Best match
+    </span>
+  )}
+{!isBlurred && idea.name}
+
+
+</td>
+
+<td className="px-4 py-3 text-gray-600">{idea.category}</td>
+
+<td className="px-4 py-3 text-gray-600">{idea.difficulty}</td>
+
+<td className="px-4 py-3 text-gray-600">{idea.demand}</td>
+
+<td className="px-4 py-3 font-medium text-gray-900">
+  {isBlurred ? "—" : idea.score}
+</td>
+
+<td className="px-4 py-3">
+  {!isBlurred && (
+    <span
+      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${badgeStyles[idea.badge]}`}
+    >
+      {idea.badge}
+    </span>
+  )}
+
+  {index === 0 && !isBlurred && (
+    <div className="mt-1 text-[11px] text-gray-500">
+      Best balance of demand, risk, and execution speed
+    </div>
+  )}
+</td>
+
+
+    </tr>
+  );
+})}
+
+  {/* ✅ EMPTY STATE — ADD THIS */}
+  {previewIdeas.length === 0 && (
+
+    <tr>
+      <td
+        colSpan={6}
+        className="px-4 py-6 text-center text-sm text-gray-500"
+      >
+        No ideas match your filters. Try adjusting them.
+      </td>
+    </tr>
+  )}
+</tbody>
+
               </table>
-            </div>
 
-            <div className="border-t border-gray-100 px-4 py-4">
-         <button
-  disabled={assistantThinking}
-  onClick={() => {
-    setAssistantThinking(true);
-
-    setTimeout(() => {
-      setUpgradeOpen(true);
-      setAssistantThinking(false);
-    }, 400);
-  }}
-  className={`w-full rounded-xl px-4 py-2 text-sm font-semibold transition ${
-    assistantThinking
-      ? "bg-gray-400 cursor-not-allowed text-white"
-      : "bg-gray-900 text-white hover:bg-gray-800"
-  }`}
->
-  {assistantThinking ? "Analyzing more ideas…" : "Unlock all 100 ideas"}
-</button>
+<div className="border-t border-gray-100 px-4 py-4 space-y-2">
+ <div className="text-xs text-gray-500 text-center">
+  Showing{" "}
+  <span className="font-medium text-gray-700">
+    top {visibleIdeasCount}
+  </span>{" "}
+  ideas ·{" "}
+  <span className="font-medium text-gray-700">
+    {totalIdeasCount - visibleIdeasCount}
+  </span>{" "}
+  more unlocked with Pro
+</div>
 
 
-            </div>
+  <button
+    disabled={assistantThinking}
+    onClick={() => {
+      setAssistantThinking(true);
+
+      setTimeout(() => {
+        setUpgradeOpen(true);
+        setAssistantThinking(false);
+      }, 400);
+    }}
+    className={`w-full rounded-xl px-4 py-2 text-sm font-semibold transition ${
+      assistantThinking
+        ? "bg-gray-400 cursor-not-allowed text-white"
+        : "bg-gray-900 text-white hover:bg-gray-800"
+    }`}
+  >
+    {assistantThinking
+      ? "Analyzing more ideas…"
+      : "Unlock all 100 personalized ideas"}
+  </button>
+
+  <p className="text-center text-[11px] text-gray-400">
+    Includes deeper analysis, rankings, and full idea breakdowns
+  </p>
+</div>
+
+
+       
+
+
+</div>
+
+
           </section>
         </div>
       </div>
