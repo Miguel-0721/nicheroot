@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import IdeaDrawer from "@/components/IdeaDrawer";
 import UpgradeModal from "@/components/UpgradeModal";
 
+const IS_DEV = process.env.NODE_ENV === "development";
+
 
 type Badge = "gold" | "silver" | "bronze" | "grey";
 
@@ -110,9 +112,34 @@ function generateSessionIdeas(): Idea[] {
 
 
 
+function normalizeIdeas(rawIdeas: any[]): Idea[] {
+  return rawIdeas.map((idea, index) => ({
+    id: index + 1,
+    name: idea.name || idea.title || "Untitled idea",
+    category: idea.category || "General",
+    difficulty: idea.difficulty || "Medium",
+    demand: idea.demand || "Medium",
+    score: typeof idea.score === "number" ? idea.score : 60,
+    badge:
+      typeof idea.score === "number" && idea.score >= 80
+        ? "gold"
+        : typeof idea.score === "number" && idea.score >= 70
+        ? "silver"
+        : "bronze",
+    locked: index >= PREVIEW_VISIBLE_COUNT, // ✅ ADD THIS
+  }));
+}
+
+
+
+
+
 export default function ExplorePage() {
   const [ideas, setIdeas] = useState<Idea[]>([]);
+  const [isLoaded, setIsLoaded] = useState(false);
+
   const [category, setCategory] = useState("All");
+
   const [difficulty, setDifficulty] = useState("All");
   const [signal, setSignal] = useState("All");
   const [onboardingText, setOnboardingText] = useState<string | null>(null);
@@ -135,49 +162,63 @@ const triggerAssistantThinking = () => {
 };
 
 
-  useEffect(() => {
-    const stored = sessionStorage.getItem("nicheroot_explore_ideas");
-
-if (stored) {
-  setIdeas(JSON.parse(stored));
-} else {
-  const generated = generateSessionIdeas();
-  setIdeas(generated);
-  sessionStorage.setItem(
-    "nicheroot_explore_ideas",
-    JSON.stringify(generated)
-  );
-}
-
-
-
-    // Read onboarding context from localStorage
-    try {
-      const raw = localStorage.getItem("nicheroot_v2_onboarding");
-      if (raw) {
-        const parsed = JSON.parse(raw) as OnboardingPayload;
-        if (parsed?.onboardingText) {
-          setOnboardingText(parsed.onboardingText);
-        }
+useEffect(() => {
+  // 1️⃣ Read onboarding context FIRST
+  try {
+    const raw = localStorage.getItem("nicheroot_v2_onboarding");
+    if (raw) {
+      const parsed = JSON.parse(raw) as OnboardingPayload;
+      if (parsed?.onboardingText) {
+        setOnboardingText(parsed.onboardingText);
       }
-    } catch {
-      // ignore storage errors
     }
+  } catch {}
 
-// 🔁 Restore previously selected idea (Step 2)
-const storedIdea = sessionStorage.getItem("nicheroot_selected_idea");
+  // 2️⃣ Try API-generated ideas
+  try {
+  const raw = sessionStorage.getItem("nicheroot_ideas_v2");
+if (raw) {
+  const parsed = JSON.parse(raw);
 
-if (storedIdea) {
-  const parsedIdea = JSON.parse(storedIdea) as Idea;
-  setSelectedIdea(parsedIdea);
-  setDrawerOpen(true);
-  setAssistantThinking(false); // ⬅️ important polish
+  if (Array.isArray(parsed?.ideas) && parsed.ideas.length > 0) {
+    const normalized = normalizeIdeas(parsed.ideas);
+    setIdeas(normalized);
+    setIsLoaded(true);
+    return;
+  }
 }
 
+  } catch {}
+
+// 3️⃣ No API ideas
+if (IS_DEV) {
+  const generated = generateSessionIdeas();
+
+  setIdeas(
+    generated.map((idea, index) => ({
+      ...idea,
+      locked: index >= PREVIEW_VISIBLE_COUNT,
+    }))
+  );
+} else {
+  setIdeas([]);
+}
+
+setIsLoaded(true);
 
 
 
-  }, []);
+
+  // 4️⃣ Restore selected idea
+  const storedIdea = sessionStorage.getItem("nicheroot_selected_idea");
+  if (storedIdea) {
+    const parsedIdea = JSON.parse(storedIdea) as Idea;
+    setSelectedIdea(parsedIdea);
+    setDrawerOpen(true);
+    setAssistantThinking(false);
+  }
+}, []);
+
 
   const filteredIdeas = useMemo(() => {
     return ideas.filter((idea) => {
@@ -211,6 +252,8 @@ const visibleIdeasCount = Math.min(
 const totalIdeasCount = ideas.length;
 
 const showLockedPreview = true;
+if (!isLoaded) return null;
+
   return (
     <main className="min-h-screen bg-white">
       <div className="mx-auto max-w-7xl px-6 py-10">
@@ -298,20 +341,56 @@ const showLockedPreview = true;
     🧠 Generated for you this session
   </div>
 
-  <button
-    onClick={() => {
-      setAssistantThinking(true);
+<button
+  onClick={async () => {
+    setAssistantThinking(true);
 
-setTimeout(() => {
-  sessionStorage.removeItem("nicheroot_explore_ideas");
-  window.location.reload();
-}, 400);
+    const raw = localStorage.getItem("nicheroot_v2_onboarding");
+    if (!raw) {
+      setAssistantThinking(false);
+      alert("Missing onboarding context. Please restart.");
+      return;
+    }
 
-    }}
-    className="text-xs font-medium text-indigo-600 hover:underline"
-  >
-    Regenerate ideas
-  </button>
+    const { onboardingText } = JSON.parse(raw);
+    if (!onboardingText?.trim()) {
+      setAssistantThinking(false);
+      alert("Please provide your context first.");
+      return;
+    }
+
+    try {
+      const res = await fetch("/api/generate-ideas-v2", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userInput: onboardingText }),
+      });
+
+      const data = await res.json();
+
+      sessionStorage.setItem(
+        "nicheroot_ideas_v2",
+        JSON.stringify(data)
+      );
+
+      const normalized = normalizeIdeas(data.ideas);
+      setIdeas(normalized);
+      setSelectedIdea(null);
+      setDrawerOpen(false);
+      setAssistantThinking(false);
+    } catch {
+      setAssistantThinking(false);
+      alert("Failed to regenerate ideas");
+    }
+window.scrollTo({ top: 0, behavior: "smooth" });
+
+
+  }}
+  className="text-xs font-medium text-indigo-600 hover:underline"
+>
+  Regenerate ideas
+</button>
+
 </div>
 
 
@@ -392,7 +471,8 @@ setTimeout(() => {
 
           <tbody>
 {previewIdeas.map((idea, index) => {
-const isBlurred = index >= PREVIEW_VISIBLE_COUNT || idea.locked;
+const isBlurred = idea.locked;
+
 
 
 

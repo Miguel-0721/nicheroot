@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
+
 import { useRouter } from "next/navigation";
 
 const EXAMPLES = [
@@ -12,6 +13,9 @@ const EXAMPLES = [
 export default function StartPage() {
   const router = useRouter();
   const [text, setText] = useState("");
+const [loading, setLoading] = useState(false);
+
+
 
   const charCount = text.length;
   const canContinue = useMemo(() => text.trim().length >= 30, [text]);
@@ -20,23 +24,50 @@ export default function StartPage() {
     setText(example);
   }
 
-  function onContinue() {
-    const payload = {
-      onboardingText: text.trim(),
-      createdAt: Date.now(),
-    };
+async function onContinue() {
+  const trimmed = text.trim();
+  if (trimmed.length < 30) return;
 
-    try {
-      localStorage.setItem(
-        "nicheroot_v2_onboarding",
-        JSON.stringify(payload)
-      );
-    } catch {
-      // fail silently
+  setLoading(true); // ✅ ADD THIS
+
+  try {
+    const res = await fetch("/api/generate-ideas-v2", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userInput: trimmed,
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Failed to generate ideas");
     }
 
+    const ideas = await res.json();
+
+    sessionStorage.setItem(
+      "nicheroot_ideas_v2",
+      JSON.stringify(ideas)
+    );
+
+    localStorage.setItem(
+      "nicheroot_v2_onboarding",
+      JSON.stringify({
+        onboardingText: trimmed,
+        createdAt: Date.now(),
+      })
+    );
+
     router.push("/explore");
+  } catch (err) {
+    console.error("Explore error:", err);
+    alert("Something went wrong generating ideas.");
+    setLoading(false); // ✅ ADD THIS
   }
+}
+
+
+
 
   return (
     <main className="min-h-screen bg-white">
@@ -67,12 +98,18 @@ export default function StartPage() {
             Your situation
           </label>
 
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            placeholder="Example: I want an online business with low startup costs. I can work evenings and weekends. I like learning, organizing ideas, and building things long-term."
-            className="h-40 w-full resize-none rounded-xl border border-gray-200 bg-white px-4 py-3 text-[15px] leading-6 text-gray-900 outline-none placeholder:text-gray-400 focus:border-gray-300"
-          />
+         <textarea
+  value={text}
+  onChange={(e) => setText(e.target.value)}
+  disabled={loading} // ✅ ADD THIS
+  placeholder="Example: I want an online business with low startup costs..."
+  className={`h-40 w-full resize-none rounded-xl border px-4 py-3 text-[15px] leading-6 outline-none
+    ${loading
+      ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+      : "bg-white text-gray-900 placeholder:text-gray-400 focus:border-gray-300 border-gray-200"
+    }`}
+ />
+
 
           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-xs text-gray-500">
@@ -82,18 +119,21 @@ export default function StartPage() {
               </span>
             </div>
 
-            <button
-              onClick={onContinue}
-              disabled={!canContinue}
-              className={`rounded-xl px-4 py-2 text-sm font-semibold transition
-                ${
-                  canContinue
-                    ? "bg-gray-900 text-white hover:bg-gray-800"
-                    : "cursor-not-allowed bg-gray-200 text-gray-500"
-                }`}
-            >
-              Explore ideas →
-            </button>
+           <button
+  onClick={onContinue}
+  disabled={!canContinue || loading}
+  className={`rounded-xl px-4 py-2 text-sm font-semibold transition
+    ${
+      loading
+        ? "bg-gray-400 cursor-not-allowed text-white"
+        : canContinue
+        ? "bg-gray-900 text-white hover:bg-gray-800"
+        : "cursor-not-allowed bg-gray-200 text-gray-500"
+    }`}
+>
+  {loading ? "Generating ideas…" : "Explore ideas →"}
+</button>
+
           </div>
         </div>
 
