@@ -120,6 +120,17 @@ IDEA GENERATION RULES (MANDATORY):
 6. Scores must reflect ranking order (top ideas score higher).
 
 
+ANTI-REPETITION RULE (MANDATORY):
+- Do NOT reuse business ideas, structures, or phrasing that commonly appear
+  in generic startup lists.
+- If an idea feels familiar or “standard”, discard it and generate a more specific variant.
+- Each idea must be meaningfully distinct in:
+  (a) business model
+  (b) customer type
+  (c) value creation mechanism
+
+
+
 DOMAIN LEVERAGE VALIDATION (CRITICAL RULE):
 
 Before finalizing the ranked list, you MUST verify:
@@ -197,14 +208,19 @@ to preserve discovery and comparison.
 `;
 
 
-    const response = await client.responses.create({
-      model: "gpt-4.1",
-      input: [
-        { role: "system", content: systemPrompt },
-        { role: "user", content: userPrompt },
-      ],
-      max_output_tokens: 1400,
-    });
+  const response = await client.responses.create({
+  model: "gpt-4.1",
+  input: [
+    { role: "system", content: systemPrompt },
+    { role: "user", content: userPrompt },
+  ],
+  max_output_tokens: 1400,
+
+  // 👇 ADD THESE
+  temperature: 0.85,
+  top_p: 0.9,
+});
+
 
     const raw = safeGetText(response);
     if (!raw) throw new Error("No output from model");
