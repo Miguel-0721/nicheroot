@@ -83,13 +83,14 @@ async function onContinue() {
             Tell me what you’re looking for
           </h1>
 
-          <p className="mt-3 text-base leading-7 text-gray-600">
-            Describe your goals, budget, skills, and time. I’ll generate{" "}
-            <span className="font-medium text-gray-900">
-              100 business ideas
-            </span>{" "}
-            and help you narrow down the best ones.
-          </p>
+        <p className="mt-3 text-base leading-7 text-gray-600">
+  Describe your goals, budget, skills, and time. I’ll generate{" "}
+  <span className="font-medium text-gray-900">
+    your top business ideas
+  </span>{" "}
+  and help you compare the strongest options.
+</p>
+
         </div>
 
         {/* Input box */}

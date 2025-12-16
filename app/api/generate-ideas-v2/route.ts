@@ -179,6 +179,29 @@ Return ONLY valid JSON wrapped EXACTLY like:
 
 No markdown. No commentary. No text outside <json>.
 
+REASON FORMAT RULE (TOP 3 IDEAS ONLY):
+
+- Include the "reason" field ONLY for the TOP 3 ranked ideas.
+- Each reason MUST contain EXACTLY 3 bullet points, separated by the "•" character.
+
+Each bullet must cover ONE distinct angle:
+1) Time & effort realism (e.g. part-time hours, solo-friendly workload)
+2) Low-risk validation path (e.g. first channel, first test, small budget)
+3) Why this idea ranks higher than nearby alternatives FOR THIS USER
+
+Rules:
+- Bullets must reference at least one concrete constraint (time, money, skill).
+- Avoid generic phrases like "fits your goals" or "good potential".
+- Do NOT promise revenue, success, or timelines.
+- Do NOT reuse phrasing across different ideas.
+- Keep bullets short and factual, not promotional.
+
+
+Additional constraint:
+- At least ONE bullet per top-3 idea must explicitly compare it
+  against another nearby option (e.g. “Ranks higher than X because…”).
+
+
 SCHEMA:
 {
   "ideas": [
@@ -190,7 +213,8 @@ SCHEMA:
       "demand": "Low|Medium|High",
       "score": 0-100,
       "signal": "gold|silver|bronze",
-      "reason": "optional short justification (<= 140 chars)"
+      "reason": "• Bullet point 1 • Bullet point 2 • Bullet point 3"
+
     }
   ]
 }

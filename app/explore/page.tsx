@@ -18,6 +18,7 @@ type Idea = {
   score: number;
   badge: Badge;
   locked?: boolean;
+  reason?: string; // ✅ required
 };
 
 type OnboardingPayload = {
@@ -126,9 +127,11 @@ function normalizeIdeas(rawIdeas: any[]): Idea[] {
         : typeof idea.score === "number" && idea.score >= 70
         ? "silver"
         : "bronze",
-    locked: index >= PREVIEW_VISIBLE_COUNT, // ✅ ADD THIS
+    reason: typeof idea.reason === "string" ? idea.reason : undefined, // ✅ ADD THIS
+    locked: index >= PREVIEW_VISIBLE_COUNT,
   }));
 }
+
 
 
 
@@ -158,8 +161,9 @@ const triggerAssistantThinking = () => {
   setAssistantThinking(true);
   setTimeout(() => {
     setAssistantThinking(false);
-  }, 400);
+  }, 1200);
 };
+
 
 
 useEffect(() => {
@@ -334,7 +338,12 @@ if (!isLoaded) return null;
           </aside>
 
           {/* RIGHT: Table */}
-          <section className="rounded-2xl border border-gray-200 bg-white shadow-sm">
+          <section
+  className={`rounded-2xl border border-gray-200 bg-white shadow-sm transition-opacity ${
+    assistantThinking ? "opacity-60" : "opacity-100"
+  }`}
+>
+
 
 <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
   <div className="text-xs text-gray-500">
@@ -342,6 +351,7 @@ if (!isLoaded) return null;
   </div>
 
 <button
+  disabled={assistantThinking}
   onClick={async () => {
     setAssistantThinking(true);
 
@@ -377,19 +387,22 @@ if (!isLoaded) return null;
       setIdeas(normalized);
       setSelectedIdea(null);
       setDrawerOpen(false);
-      setAssistantThinking(false);
     } catch {
-      setAssistantThinking(false);
       alert("Failed to regenerate ideas");
+    } finally {
+      setAssistantThinking(false);
+      window.scrollTo({ top: 0, behavior: "smooth" });
     }
-window.scrollTo({ top: 0, behavior: "smooth" });
-
-
   }}
-  className="text-xs font-medium text-indigo-600 hover:underline"
+  className={`text-xs font-medium ${
+    assistantThinking
+      ? "text-gray-400 cursor-not-allowed"
+      : "text-indigo-600 hover:underline"
+  }`}
 >
-  Regenerate ideas
+  {assistantThinking ? "Regenerating ideas…" : "Regenerate ideas"}
 </button>
+
 
 </div>
 
@@ -540,7 +553,26 @@ isBlurred
       #1 Best match
     </span>
   )}
-{!isBlurred && idea.name}
+
+{/* 1️⃣ Idea name FIRST */}
+{!isBlurred && (
+  <div className="font-medium text-gray-900">
+    {idea.name}
+  </div>
+)}
+
+{/* 2️⃣ Reason UNDER the idea name (top 3 only) */}
+{!isBlurred && index < 3 && idea.reason && (
+  <div className="mt-2 text-xs text-gray-600">
+    <div className="font-medium text-gray-700">Why this fits you</div>
+    <ul className="mt-1 list-disc pl-4 space-y-0.5">
+      {idea.reason.split("•").map((r, i) =>
+        r.trim() ? <li key={i}>{r.trim()}</li> : null
+      )}
+    </ul>
+  </div>
+)}
+
 
 
 </td>
@@ -592,18 +624,14 @@ isBlurred
 
               </table>
 
-<div className="border-t border-gray-100 px-4 py-4 space-y-2">
- <div className="text-xs text-gray-500 text-center">
+<div className="text-xs text-gray-500 text-center">
   Showing{" "}
   <span className="font-medium text-gray-700">
-    top {visibleIdeasCount}
+    top matches
   </span>{" "}
-  ideas ·{" "}
-  <span className="font-medium text-gray-700">
-    {totalIdeasCount - visibleIdeasCount}
-  </span>{" "}
-  more unlocked with Pro
+  · unlock deeper comparisons with Pro
 </div>
+
 
 
   <button
@@ -624,7 +652,7 @@ isBlurred
   >
     {assistantThinking
       ? "Analyzing more ideas…"
-      : "Unlock all 100 personalized ideas"}
+      : "Unlock deeper analysis & full rankings"}
   </button>
 
   <p className="text-center text-[11px] text-gray-400">
@@ -636,7 +664,7 @@ isBlurred
        
 
 
-</div>
+
 
 
           </section>

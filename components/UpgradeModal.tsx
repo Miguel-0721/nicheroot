@@ -29,20 +29,22 @@ export default function UpgradeModal({ open, onClose }: Props) {
             exit={{ scale: 0.95, opacity: 0 }}
           >
             <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Unlock all business ideas
-              </h2>
+            <h2 className="text-xl font-semibold text-gray-900">
+  Unlock deeper analysis
+</h2>
 
               <p className="mt-2 text-sm text-gray-600">
-                Get full access to all 100 curated ideas, advanced filters, and
-                personalized blueprints.
-              </p>
+  Get full access to deeper comparisons, full rankings,
+  advanced filters, and personalized blueprints.
+</p>
+
 
               <ul className="mt-4 space-y-2 text-sm text-gray-700">
-                <li>• View all hidden ideas</li>
-                <li>• See full scores & signals</li>
-                <li>• Generate unlimited blueprints</li>
-              </ul>
+  <li>• See full rankings and comparisons</li>
+  <li>• View complete scores and signals</li>
+  <li>• Generate personalized blueprints</li>
+</ul>
+
 
               <div className="mt-6 space-y-3">
                 <button className="w-full rounded-xl bg-indigo-600 px-4 py-3 text-sm font-semibold text-white hover:bg-indigo-500">

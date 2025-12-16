@@ -29,6 +29,23 @@ type Blueprint = {
   }[];
 };
 
+
+function describeFit(score: number) {
+  if (score >= 75) return "Strong fit with clear constraints";
+  if (score >= 60) return "Moderate fit with notable constraints";
+  if (score >= 45) return "Weak to moderate fit";
+  return "Poor fit under current constraints";
+}
+
+function describeRisk(score: number) {
+  if (score >= 75) return "High uncertainty and execution risk";
+  if (score >= 60) return "Meaningful risk with unclear demand";
+  if (score >= 45) return "Moderate risk";
+  return "Lower relative risk, not guaranteed";
+}
+
+
+
 /* ---------------- PAGE ---------------- */
 
 export default function BlueprintV2Page() {
@@ -166,15 +183,17 @@ const userContext =
           {blueprint.meta.nicheTitle}
         </h2>
 
-        <div className="rounded-lg bg-blue-50 border border-blue-100 p-4 text-sm text-blue-900">
-          <p className="font-medium mb-1">
-            Why this business makes sense for you
-          </p>
-          <p className="text-blue-800">
-            This blueprint is tailored to your situation, focusing on realistic
-            execution, manageable risk, and fast validation instead of theory.
-          </p>
-        </div>
+      <div className="rounded-lg bg-gray-50 border border-gray-200 p-4 text-sm text-gray-700">
+  <p className="font-medium mb-1">
+    How to use this blueprint
+  </p>
+  <p>
+    This document is a decision-support guide. It does not assess likelihood
+    of success or suitability. Its purpose is to help determine whether this
+    idea should be continued, adjusted, or stopped based on observable
+    validation signals.
+  </p>
+</div>
 
         {/* Meta highlights */}
         <div className="grid grid-cols-3 gap-3 text-sm">
@@ -240,20 +259,26 @@ const userContext =
 
         {/* Right panel */}
         <aside className="col-span-3 space-y-4">
-          <div className="bg-white rounded-xl border p-4">
-            <h4 className="text-sm font-semibold mb-2">Fit Score</h4>
-            <p className="text-3xl font-bold text-blue-600">
-              {blueprint.meta.scores.fit}
-            </p>
-            <p className="text-xs text-gray-500">Strong match</p>
-          </div>
+       <div className="bg-white rounded-xl border p-4">
+  <h4 className="text-sm font-semibold mb-2">Fit Score</h4>
+  <p className="text-3xl font-bold text-blue-600">
+    {blueprint.meta.scores.fit}
+  </p>
+  <p className="text-xs text-gray-500">
+    {describeFit(blueprint.meta.scores.fit)}
+  </p>
+</div>
 
-          <div className="bg-white rounded-xl border p-4">
-            <h4 className="text-sm font-semibold mb-2">Risk Level</h4>
-            <p className="text-lg font-medium">
-              {blueprint.meta.scores.risk}
-            </p>
-          </div>
+       <div className="bg-white rounded-xl border p-4">
+  <h4 className="text-sm font-semibold mb-2">Risk Level</h4>
+  <p className="text-lg font-medium">
+    {blueprint.meta.scores.risk}
+  </p>
+  <p className="text-xs text-gray-500 mt-1">
+    {describeRisk(blueprint.meta.scores.risk)}
+  </p>
+</div>
+
         </aside>
       </div>
     </div>
