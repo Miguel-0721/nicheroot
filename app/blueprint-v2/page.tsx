@@ -172,9 +172,17 @@ const userContext =
         <main className="col-span-6 space-y-6">
        {activeSection && (
   <section className="bg-white rounded-xl border p-6 space-y-5">
-    <p className="text-xs uppercase text-gray-400">
-      {activeSection.title}
-    </p>
+  <p className="text-xs uppercase text-gray-400">
+    {activeSection.title}
+  </p>
+
+
+{activeSection.id === "what-this-business-actually-is" && (
+  <h2 className="text-2xl font-semibold text-gray-900 mt-1">
+    {blueprint.meta.nicheTitle}
+  </h2>
+)}
+
 
     {/* Executive Overview Header */}
     {activeSection.id === "executive-overview" && (
@@ -224,11 +232,13 @@ const userContext =
     )}
 
 
-              <div className="space-y-4 text-sm text-gray-700">
-                {activeSection.content.paragraphs?.map((p, i) => (
-                  <p key={i}>{p}</p>
-                ))}
-              </div>
+            <div className="space-y-4 text-sm text-gray-700">
+  {activeSection.content.paragraphs?.map((p, i) => (
+    <p key={i}>{p}</p>
+  ))}
+</div>
+
+
 
               {activeSection.content.lists?.map((list, i) => (
                 <div key={i} className="mt-4">
