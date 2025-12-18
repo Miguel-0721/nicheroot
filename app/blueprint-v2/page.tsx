@@ -1,4 +1,5 @@
 "use client";
+import BlueprintBlockRenderer from "@/components/BlueprintBlockRenderer";
 
 import { useEffect, useState } from "react";
 
@@ -21,14 +22,20 @@ type Blueprint = {
   sections: {
     id: string;
     title: string;
-    content: {
-      paragraphs?: string[];
-      lists?: { title?: string; items: string[] }[];
-      nextMoves?: string[];
-    };
+  content: {
+  blocks: {
+    type: "paragraph" | "list" | "table";
+    value: any;
+  }[];
+  nextMoves?: string[];
+};
+
   }[];
 };
 
+function cleanTitle(title: string) {
+  return title.replace(/^\d+\.\s*/, "");
+}
 
 function describeFit(score: number) {
   if (score >= 75) return "Strong fit with clear constraints";
@@ -88,10 +95,45 @@ const userContext =
           throw new Error("Failed to generate blueprint");
         }
 
-        const data = await res.json();
+       const data = await res.json();
 
-        setBlueprint(data);
-        setActiveSectionId(data.sections[0]?.id ?? null);
+const CANONICAL_SECTION_ORDER = [
+  "what-this-business-actually-is",
+  "who-this-is-for-and-who-it-isnt",
+  "day-to-day-operational-reality",
+  "problem-and-market-reality",
+  "demand-signals-and-market-evidence",
+  "pricing-reality-and-willingness-to-pay",
+  "tools-skills-and-setup-required",
+  "execution-path-first-30-days",
+  "common-failure-patterns",
+  "risks-tradeoffs-and-assumptions",
+];
+
+const sortedSections = [...data.sections]
+  .map((s: any) => ({
+    ...s,
+    title: cleanTitle(s.title),
+  }))
+  .sort((a, b) => {
+    const ai = CANONICAL_SECTION_ORDER.indexOf(a.id);
+    const bi = CANONICAL_SECTION_ORDER.indexOf(b.id);
+
+    if (ai === -1 && bi === -1) return 0;
+    if (ai === -1) return 1;
+    if (bi === -1) return -1;
+
+    return ai - bi;
+  });
+
+setBlueprint({
+  ...data,
+  sections: sortedSections,
+});
+
+setActiveSectionId(sortedSections[0]?.id ?? null);
+
+
       } catch (err: any) {
         setError(err.message || "Something went wrong");
       } finally {
@@ -152,17 +194,18 @@ const userContext =
             {blueprint.sections.map((section) => {
               const isActive = section.id === activeSectionId;
               return (
-                <li
-                  key={section.id}
-                  onClick={() => setActiveSectionId(section.id)}
-                  className={`cursor-pointer rounded-md px-2 py-1 transition ${
-                    isActive
-                      ? "bg-blue-50 text-blue-600 font-medium"
-                      : "text-gray-600 hover:bg-gray-100"
-                  }`}
-                >
-                  {section.title}
-                </li>
+             <li
+  key={section.id}
+  onClick={() => setActiveSectionId(section.id)}
+  className={`cursor-pointer rounded-md px-2 py-1 transition ${
+    isActive
+      ? "bg-blue-50 text-blue-600 font-medium"
+      : "text-gray-600 hover:bg-gray-100"
+  }`}
+>
+  {cleanTitle(section.title)}
+</li>
+
               );
             })}
           </ul>
@@ -172,9 +215,10 @@ const userContext =
         <main className="col-span-6 space-y-6">
        {activeSection && (
   <section className="bg-white rounded-xl border p-6 space-y-5">
-  <p className="text-xs uppercase text-gray-400">
-    {activeSection.title}
-  </p>
+ <p className="text-xs uppercase text-gray-400">
+  {cleanTitle(activeSection.title)}
+</p>
+
 
 
 {activeSection.id === "what-this-business-actually-is" && (
@@ -184,111 +228,43 @@ const userContext =
 )}
 
 
-    {/* Executive Overview Header */}
-    {activeSection.id === "executive-overview" && (
-      <>
-        <h2 className="text-2xl font-semibold">
-          {blueprint.meta.nicheTitle}
-        </h2>
-
-      <div className="rounded-lg bg-gray-50 border border-gray-200 p-4 text-sm text-gray-700">
-  <p className="font-medium mb-1">
-    How to use this blueprint
+{/* Fallback if something goes wrong */}
+{!activeSection.content.blocks?.length && (
+  <p className="text-sm text-gray-400 italic">
+    No content available for this section.
   </p>
-  <p>
-    This document is a decision-support guide. It does not assess likelihood
-    of success or suitability. Its purpose is to help determine whether this
-    idea should be continued, adjusted, or stopped based on observable
-    validation signals.
-  </p>
-</div>
+)}
 
-        {/* Meta highlights */}
-        <div className="grid grid-cols-3 gap-3 text-sm">
-          {blueprint.meta.difficulty && (
-            <div className="rounded-lg border bg-gray-50 p-3">
-              <p className="text-xs text-gray-500">Difficulty</p>
-              <p className="font-medium">{blueprint.meta.difficulty}</p>
-            </div>
-          )}
-
-          {blueprint.meta.startupCost && (
-            <div className="rounded-lg border bg-gray-50 p-3">
-              <p className="text-xs text-gray-500">Startup cost</p>
-              <p className="font-medium">{blueprint.meta.startupCost}</p>
-            </div>
-          )}
-
-          {blueprint.meta.expectedTimeline && (
-            <div className="rounded-lg border bg-gray-50 p-3">
-              <p className="text-xs text-gray-500">Time to validate</p>
-              <p className="font-medium">
-                {blueprint.meta.expectedTimeline}
-              </p>
-            </div>
-          )}
-        </div>
-      </>
-    )}
-
-
-            <div className="space-y-4 text-sm text-gray-700">
-  {activeSection.content.paragraphs?.map((p, i) => (
-    <p key={i}>{p}</p>
-  ))}
-</div>
-
-
-
-              {activeSection.content.lists?.map((list, i) => (
-                <div key={i} className="mt-4">
-                  {list.title && (
-                    <h4 className="font-medium mb-1">{list.title}</h4>
-                  )}
-                  <ul className="list-disc pl-5 text-sm text-gray-700">
-                    {list.items.map((item, j) => (
-                      <li key={j}>{item}</li>
-                    ))}
-                  </ul>
-                </div>
-              ))}
-            </section>
-          )}
-
-          {activeSection?.content.nextMoves && (
-            <section className="bg-white rounded-xl border p-6">
-              <h3 className="font-semibold mb-2">Next Focus</h3>
-              <ul className="list-disc pl-5 text-sm text-gray-700 space-y-1">
-                {activeSection.content.nextMoves.map((move, i) => (
-                  <li key={i}>{move}</li>
-                ))}
-              </ul>
-            </section>
-          )}
-        </main>
-
-        {/* Right panel */}
+{/* ✅ ACTUAL BLOCK RENDERER */}
+{activeSection.content.blocks?.length > 0 && (
+  <BlueprintBlockRenderer
+    blocks={activeSection.content.blocks}
+      />
+      )}
+    </section>
+  )}
+</main>
+   {/* Right panel */}
         <aside className="col-span-3 space-y-4">
-       <div className="bg-white rounded-xl border p-4">
-  <h4 className="text-sm font-semibold mb-2">Fit Score</h4>
-  <p className="text-3xl font-bold text-blue-600">
-    {blueprint.meta.scores.fit}
-  </p>
-  <p className="text-xs text-gray-500">
-    {describeFit(blueprint.meta.scores.fit)}
-  </p>
-</div>
+          <div className="bg-white rounded-xl border p-4">
+            <h4 className="text-sm font-semibold mb-2">Fit Score</h4>
+            <p className="text-3xl font-bold text-blue-600">
+              {blueprint.meta.scores.fit}
+            </p>
+            <p className="text-xs text-gray-500">
+              {describeFit(blueprint.meta.scores.fit)}
+            </p>
+          </div>
 
-       <div className="bg-white rounded-xl border p-4">
-  <h4 className="text-sm font-semibold mb-2">Risk Level</h4>
-  <p className="text-lg font-medium">
-    {blueprint.meta.scores.risk}
-  </p>
-  <p className="text-xs text-gray-500 mt-1">
-    {describeRisk(blueprint.meta.scores.risk)}
-  </p>
-</div>
-
+          <div className="bg-white rounded-xl border p-4">
+            <h4 className="text-sm font-semibold mb-2">Risk Level</h4>
+            <p className="text-lg font-medium">
+              {blueprint.meta.scores.risk}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              {describeRisk(blueprint.meta.scores.risk)}
+            </p>
+          </div>
         </aside>
       </div>
     </div>

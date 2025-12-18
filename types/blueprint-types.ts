@@ -5,11 +5,12 @@
  * These are shown in the header / summary area.
  */
 export type BlueprintScoreMetrics = {
+  fit: number;          // 0–100
   risk: number;         // 0–100
-  skillFit: number;     // 0–100
   demand: number;       // 0–100
   monetization: number; // 0–100
 };
+
 
 /**
  * Meta information about the blueprint: short labels used
@@ -129,34 +130,6 @@ export type ExampleBlock = {
  * The core content payload for a single blueprint section.
  * Each section may use only some of these blocks.
  */
-export type SectionContent = {
-  /** 1–N paragraphs of explanatory text. */
-  paragraphs?: string[];
-
-  /** 0–N bullet lists with optional headings. */
-  lists?: ListBlock[];
-
-  /** 0–N tables for structured comparisons / frameworks. */
-  tables?: TableBlock[];
-
-  /** 0–N charts for numeric or time-series data. */
-  charts?: ChartBlock[];
-
-  /** 0–N conceptual diagrams (funnels, journeys, canvases, etc.). */
-  diagrams?: DiagramBlock[];
-
-  /** 0–N image / illustration references. */
-  images?: ImageBlock[];
-
-  /** 0–N example collections (e.g. example offers, messages). */
-  examples?: ExampleBlock[];
-
-  /**
-   * Concrete action items for this specific section.
-   * These should be very practical, beginner-friendly steps.
-   */
-  nextMoves?: string[];
-};
 
 /**
  * A logical section of the blueprint (e.g. "Executive Overview",
@@ -167,16 +140,38 @@ export type SectionContent = {
  * - show `title` and `eyebrow` in the header,
  * - render blocks from `content` in order.
  */
+export type ContentBlock =
+  | {
+      type: "paragraph";
+      value: string;
+    }
+  | {
+      type: "list";
+      value: {
+        title?: string;
+        ordered?: boolean;
+        items: string[];
+      };
+    }
+  | {
+      type: "table";
+      value: {
+        title?: string;
+        columns: string[];
+        rows: string[][];
+        explanation?: string;
+      };
+    };
+
+
 export type BlueprintSection = {
-  /** Stable identifier, e.g. "executive-overview" */
-  id: string;
-  /** Human-facing section title, e.g. "Executive Overview" */
-  title: string;
-  /** Small label above the title, e.g. "High-level snapshot" */
-  eyebrow?: string;
-  /** Main content blocks for this section. */
-  content: SectionContent;
-};
+  id: string
+  title: string
+  content: {
+    blocks: ContentBlock[]
+  }
+}
+
 
 /**
  * The full, modern NicheRoot blueprint shape.

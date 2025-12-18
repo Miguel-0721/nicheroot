@@ -24,28 +24,44 @@ The JSON MUST have this exact structure:
       "id": "tools-skills-and-setup-required",
       "title": "Tools, Skills & Setup Required",
       "content": {
-        "paragraphs": string[]
+     "blocks": [
+  { "type": "paragraph", "value": string },
+  { "type": "paragraph", "value": string }
+]
+
       }
     },
     {
       "id": "execution-path-first-30-days",
       "title": "Execution Path (First 30 Days)",
       "content": {
-        "paragraphs": string[]
+    "blocks": [
+  { "type": "paragraph", "value": string },
+  { "type": "paragraph", "value": string }
+]
+
       }
     },
     {
       "id": "common-failure-patterns",
       "title": "Common Failure Patterns",
       "content": {
-        "paragraphs": string[]
+      "blocks": [
+  { "type": "paragraph", "value": string },
+  { "type": "paragraph", "value": string }
+]
+
       }
     },
     {
       "id": "risks-tradeoffs-and-assumptions",
       "title": "Risks, Tradeoffs & Assumptions",
       "content": {
-        "paragraphs": string[]
+       "blocks": [
+  { "type": "paragraph", "value": string },
+  { "type": "paragraph", "value": string }
+]
+
       }
     }
   ]
@@ -57,14 +73,15 @@ RULES:
 - Each section MUST include:
   - id
   - title
-  - content.paragraphs (1–4 strings)
+  - content.blocks
+- Use ONLY paragraph blocks
+- Each section MUST have 2–6 paragraph blocks
 - NO extra keys
-- NO nested objects
-- NO bullet structures
-- NO tools / steps / risks arrays
-- NO explanations
 - NO markdown
 - NO text outside <json>
+
+Tone:
+Neutral. Literal. Observational. Skeptical.
 
 If you cannot comply, output:
 
@@ -73,6 +90,7 @@ If you cannot comply, output:
 </json>
 `;
 }
+
 
 export function buildPass3UserPrompt(idea: any, userContext?: string) {
   return `

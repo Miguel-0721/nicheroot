@@ -27,7 +27,8 @@ export default function BlueprintSidebar({ tabs, activeTab, setActiveTab }: Side
               }
             `}
           >
-            {tab}
+           {tab.replace(/^\d+\.\s*/, "")}
+
           </button>
         ))}
       </div>
