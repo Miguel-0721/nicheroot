@@ -392,6 +392,9 @@ not more confident.
 
 
 
+   
+
+
 
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -399,68 +402,113 @@ SECTION 6 — Pricing Reality & Willingness to Pay
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Purpose:
-Describe how pricing typically appears in the market today, based only on observable listings and behavior.
-This section exists to ground expectations, not to suggest opportunity.
+Describe how pricing for this type of business typically appears in public listings,
+and what those prices usually include or exclude.
+This section exists to show observable pricing reality, not to recommend what to charge.
 
-Rules:
+General rules:
 - Do NOT recommend pricing
-- Do NOT imply affordability, profitability, or upside
-- Do NOT compare prices as good or bad
-- Do NOT use ranges framed as attractive or accessible
-- Do NOT say “low”, “high”, “cheap”, or “expensive”
-- The pricing model described MUST directly correspond to the business idea provided.
-- Do NOT substitute adjacent business models (e.g. subscriptions, boxes, SaaS) unless they are the core idea.
+- Do NOT frame prices as good, bad, cheap, or expensive
+- Do NOT predict revenue or profitability
+- Do NOT imply success or failure
+- Pricing information must be descriptive and observational only
 
 
 REQUIRED STRUCTURE (STRICT):
 
-Paragraph 1 — How pricing is typically presented
-- Describe where prices are publicly visible:
-  • freelance listings
+Section 6 MUST include:
+- At least 3 paragraph blocks
+- EXACTLY 1 table block
+- Optional list block allowed (MAX 1)
+
+
+Paragraph 1 — Where pricing is usually visible
+- Describe where prices are publicly shown:
   • marketplaces
+  • creator websites
   • product pages
-- State that pricing is usually fixed, scoped, and visible before purchase.
-- Do NOT evaluate or judge the pricing.
+- State that prices are usually visible before purchase.
+- Clarify that visible prices show listing behavior, not conversion behavior.
 
-Paragraph 2 — Common pricing structures
-- Describe how pricing is structured:
-  • one-time fees
-  • fixed-scope deliverables
-  • limited revisions or access
-- Emphasize predictability and narrow scope.
-- Do NOT imply flexibility or negotiation.
 
-Paragraph 3 — What payment usually includes and excludes
-- Describe what payment typically includes:
-  • a clearly defined output
-  • limited interaction
-- Explicitly state what is commonly excluded:
-  • customization beyond scope
-  • ongoing support
-  • follow-up work
-- Do NOT frame exclusions as drawbacks.
+Paragraph 2 — How pricing is commonly structured
+- Describe how pricing is typically set:
+  • one-time purchases
+  • bundles or collections
+  • tiered access based on scope or depth
+- Describe how scope (topic depth, page count, extras) influences listed prices.
+- Do NOT evaluate which structure is better.
 
-Paragraph 4 — Willingness to pay as evidence
+
+Paragraph 3 — Observed public price bands
+- Describe commonly observed price ranges as they appear in listings.
+- Use approximate bands (e.g. “€5–€15”) where relevant.
+- Explicitly state that these are observed listing prices, not proof of sales volume.
+- Avoid language that implies what people *should* pay.
+
+
+REQUIRED table block (EXACTLY ONE):
+
+Table purpose:
+Show how different pricing presentations typically differ in scope and exclusions.
+
+Table title (REQUIRED):
+"Observed pricing structures in this category"
+
+Table columns (REQUIRED):
+["Pricing presentation", "What is usually included", "What is usually excluded"]
+
+Table rules:
+- Rows must be descriptive, not evaluative
+- No advice language
+- No performance claims
+- No implied recommendations
+
+
+Paragraph 4 — What pricing does and does not signal
 - State clearly that:
-  • expressed interest without payment is common
-  • views, inquiries, or comments do not indicate willingness to pay
-- Emphasize that payment behavior is the only reliable signal.
-
-FORBIDDEN:
-- Revenue language
-- “You could charge” phrasing
-- Success stories
-- Market size references
-- Any suggestion that buyers are likely to pay
-
-ID REQUIREMENT:
-- id MUST be exactly: "pricing-reality-and-willingness-to-pay"
+  • interest, views, or page visits do not equal willingness to pay
+  • only completed purchases show real payment behavior
+- Emphasize that public pricing shows supply expectations, not buyer certainty.
+- Avoid conclusions.
 
 
+Optional Paragraph 5 — What usually pushes pricing up or down
+- Describe observable factors that commonly correlate with higher listed prices.
+- Examples may include:
+  • broader scope or automation
+  • time savings for buyers
+  • integration with other tools
+- Describe observable factors that commonly correlate with lower listed prices.
+- Do NOT frame changes as good or bad.
+- Do NOT imply optimization or strategy.
+
+Optional Paragraph 6 — Why some products remain low-priced
+- Describe observable reasons why some tools or products stay inexpensive.
+- Examples may include:
+  • limited scope
+  • static or one-time functionality
+  • lack of ongoing usage
+- Do NOT imply that growth is possible or impossible.
+- Do NOT frame low pricing as a mistake or weakness.
+
+
+
+ID REQUIREMENT (STRICT):
+id MUST be exactly:
+"pricing-reality-and-willingness-to-pay"
 
 
 Tone:
-Neutral. Literal. Observational. Skeptical.
+Neutral. Literal. Grounded in observable reality.
+This section should make pricing behavior clearer, not more optimistic.
+
+
+
+
+
+
+
 
 If you cannot comply exactly, output:
 <json>{}</json>
