@@ -275,68 +275,145 @@ SECTION 2 — HARD RULES
 ────────────────────────
 
 Purpose:
-Explain who this business realistically fits and who it does not, without encouragement.
+Help the reader decide whether this business realistically fits their life,
+work habits, and tolerance for friction — or whether it is a poor match.
+This section exists to filter people out, not to motivate them.
 
-Required paragraphs (minimum 4):
-Paragraph 1:
-- Describe the type of person this business fits
-- Reference time availability, tolerance for uncertainty, and work style
-- Use plain language (no “entrepreneurial”, no “high agency”)
+General rules:
+- Assume the reader is comparing this business against their real life, not an ideal one.
+- Describe fit and mismatch in plain, literal language.
+- Do NOT encourage, reassure, or soften conclusions.
+- Do NOT suggest improvement paths or learning strategies.
 
-Paragraph 2:
-- Describe what the person must be okay doing repeatedly
-- Include at least one example of “unsexy” work
+Allowed content blocks:
+- Paragraph blocks ONLY
 
-Paragraph 3:
-- Describe who commonly struggles with this business
-- Include at least one personality or lifestyle mismatch
-- Be neutral, not judgmental
+Disallowed content blocks:
+- Lists
+- Tables
+- Visuals
+- Bullet points of any kind
 
-Paragraph 4:
-- Include at least one explicit disqualifier (concrete)
-  “This is not suitable if…”
-  “This becomes unrealistic when…”
+Minimum structure (STRICT):
+Section 2 MUST contain at least 4 paragraph blocks, in this conceptual order.
+More paragraphs are allowed if clarity requires it.
+
+Paragraph 1 — Who this tends to fit
+- Describe the type of person this business tends to work best for.
+- Reference:
+  - Time availability (how work fits into a week)
+  - Tolerance for uncertainty or unclear progress
+  - Preferred work style (independent, self-directed, repetitive, etc.)
+- Use descriptive language only.
+- Do NOT use labels such as “entrepreneurial”, “motivated”, or “high agency”.
+
+Paragraph 2 — What this person must tolerate repeatedly
+- Describe ongoing work that does not go away over time.
+- Include at least one example of:
+  - Repetitive work
+  - Boring or unglamorous tasks
+  - Work with delayed or unclear payoff
+- Emphasize repetition and persistence, not difficulty.
+
+Paragraph 3 — Who commonly struggles with this
+- Describe types of people or situations that often clash with this business.
+- Include at least one mismatch related to:
+  - Lifestyle (schedule, energy, responsibilities)
+  - Expectations (need for fast results, clear feedback, structure)
+- Be neutral and factual.
+- Do NOT frame mismatches as personal failures.
+
+Paragraph 4 — Explicit disqualifiers (REQUIRED)
+- Include at least one clear, concrete disqualifier written as a full sentence.
+- Use language such as:
+  - “This is not suitable if…”
+  - “This becomes unrealistic when…”
+  - “This clashes with people who…”
+- Disqualifiers must be practical and non-negotiable.
+- Avoid vague phrasing or softened language.
 
 Forbidden in Section 2:
-- Encouragement language
-- “If you’re willing to learn”
-- “Anyone can do this”
-- Success framing
+- Encouragement or reassurance of any kind
+- “If you’re willing to learn…”
+- “Anyone can do this…”
+- “With the right mindset…”
+- Success stories or outcomes
+- Advice, tips, or improvement suggestions
+- Skill-building language
 
-Tone: matter-of-fact. Filtering, not selling.
+Tone:
+Matter-of-fact, descriptive, and filtering.
+This section should slow the reader down and prompt honest self-comparison.
+
 
 ────────────────────────
 SECTION 3 — HARD RULES
 ────────────────────────
 
 Purpose:
-Describe what the work actually looks like in practice.
+Describe what the work actually feels like in practice, once someone has started.
+This section exists to normalize uneven progress, quiet periods, repetition,
+and mental friction — not to teach, motivate, or optimize.
 
-Required paragraphs (minimum 4):
-Paragraph 1:
-- Restate what the business is in simple terms
-- Anchor the reader again before describing work
+General rules:
+- Assume the reader is imagining what daily or weekly life with this business would feel like.
+- Describe experience, not performance.
+- Be literal, observational, and calm.
+- Do NOT explain how to improve the experience.
+- Do NOT frame difficulty as growth or opportunity.
 
-Paragraph 2:
-- Describe a typical week (simple timeline style, but as paragraphs)
-- Include repetition, admin, or routine tasks
-- Avoid “busy” or “productive” framing
+Allowed content blocks:
+- Paragraph blocks ONLY
 
-Paragraph 3:
-- Describe waiting, silence, or idle periods
-- Examples: waiting for replies, delayed feedback, uneven workload
+Disallowed content blocks:
+- Lists
+- Tables
+- Visuals
+- Timelines
+- Diagrams
+- Bullet points of any kind
 
-Paragraph 4:
-- Describe what is mentally tiring or frustrating (plain words)
-- No emotional reassurance
+Minimum structure (STRICT):
+Section 3 MUST contain at least 4 paragraph blocks.
+More paragraphs are allowed if clarity requires it.
+
+Paragraph 1 — Re-anchor what the business is
+- Briefly restate what this business involves in plain language.
+- Ground the reader before describing day-to-day experience.
+- Do NOT introduce new concepts or features.
+
+Paragraph 2 — What a typical week looks like
+- Describe a normal week in broad terms.
+- Emphasize uneven workload rather than steady routines.
+- Mention short bursts of activity mixed with quiet or low-action days.
+- Avoid schedule-style or step-by-step descriptions.
+
+Paragraph 3 — Waiting and quiet periods
+- Describe waiting as a normal and frequent part of the work.
+- Examples may include waiting for orders, responses, deliveries, or results.
+- Make it clear that doing nothing visible for periods of time is expected.
+- Do NOT reassure or suggest how to handle waiting.
+
+Paragraph 4 — Mental friction and repetition
+- Describe how the work can feel over time.
+- Include repetition, monotony, uncertainty, or second-guessing.
+- Avoid emotional reassurance or encouragement.
+- Do NOT suggest coping strategies or mindset shifts.
 
 Forbidden in Section 3:
-- Optimization language
-- Hustle framing
-- Growth or scaling references
-- Advice
+- Advice of any kind
+- “You should” language
+- Optimization or productivity language
+- Growth, scaling, or future upside framing
+- Motivational or reassuring statements
+- Tools, tips, or best practices
+- Success stories or outcomes
 
-Tone: literal, observational, almost boring on purpose.
+Tone:
+Observational, neutral, and intentionally understated.
+This section should make the work feel slower, quieter, and less dramatic
+than most people expect, without judging or persuading the reader.
+
 `;
 }
 

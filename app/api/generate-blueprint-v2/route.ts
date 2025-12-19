@@ -12,7 +12,9 @@ const client = new OpenAI({
 });
 
 
-const SERPAPI_ENABLED = process.env.ENABLE_SERPAPI === "true";
+const SERPAPI_BLUEPRINT_ENABLED =
+  process.env.ENABLE_SERPAPI_BLUEPRINT === "true";
+
 
 
 
@@ -104,6 +106,36 @@ function safeGetText(response: any): string {
 
 
 
+function normalizeQueries(queries: string[]) {
+  return queries.map((q) => q.toLowerCase());
+}
+
+function analyzeQueryPatterns(queries: string[]) {
+  const normalized = normalizeQueries(queries);
+
+  const hasFreeIntent = normalized.some(
+    (q) => q.includes("free") || q.includes("without paying")
+  );
+
+  const hasHowToIntent = normalized.some(
+    (q) => q.startsWith("how to") || q.includes("how do")
+  );
+
+  const hasPaidLanguage = normalized.some(
+    (q) => q.includes("price") || q.includes("pricing") || q.includes("cost")
+  );
+
+  return {
+    hasFreeIntent,
+    hasHowToIntent,
+    hasPaidLanguage,
+  };
+}
+
+
+
+
+
 
 // ✅ ADD THIS HERE
 async function runModel(
@@ -145,27 +177,71 @@ const primaryKeyword =
 
 let searchData = null;
 
-if (SERPAPI_ENABLED) {
+if (SERPAPI_BLUEPRINT_ENABLED) {
   searchData = await fetchSearchInterest(primaryKeyword);
+}
+
+
+// Dev-only: confirm SerpAPI data is being returned during blueprint testing
+if (
+  process.env.NODE_ENV === "development" &&
+  SERPAPI_BLUEPRINT_ENABLED
+) {
+  console.log(
+    "SERP QUERY SAMPLE:",
+    searchData?.related_queries?.slice(0, 3)
+  );
 }
 
 
 
 
-const hasInterestData =
-  searchData?.interest_over_time &&
-  Array.isArray(searchData.interest_over_time) &&
-  searchData.interest_over_time.length > 0;
 
-const searchSignalSummary = hasInterestData
-  ? `Search interest signals (directional only):
-- Search activity appears intermittent.
-- Queries recur but do not show consistent momentum.
-- No direct purchase intent is observable.`
-  : `Search interest signals:
-- No reliable or consistent search data was found.
-- Observable demand signals appear weak or unclear.`;
+let searchSignalSummary = SERPAPI_BLUEPRINT_ENABLED
+  ? "Search interest signals:\n"
+  : "Search interest signals:\n- External search data collection is currently disabled.\n";
 
+
+if (
+  SERPAPI_BLUEPRINT_ENABLED &&
+  searchData &&
+  typeof searchData === "object" &&
+  Array.isArray(searchData.related_queries)
+) {
+
+
+  const queries = searchData.related_queries.slice(0, 5);
+  const patterns = analyzeQueryPatterns(queries);
+
+  if (queries.length === 0) {
+    searchSignalSummary +=
+      "- No consistent or clearly attributable search queries were observed.\n" +
+      "- Visibility may be fragmented or occur outside standard search patterns.";
+  } else if (patterns.hasFreeIntent && !patterns.hasPaidLanguage) {
+    searchSignalSummary +=
+      "- Queries frequently reference free or informal alternatives.\n" +
+      "- Search phrasing suggests information-seeking rather than transaction intent.\n" +
+      "- Paid intent is not clearly distinguishable.";
+  } else if (patterns.hasHowToIntent && !patterns.hasPaidLanguage) {
+    searchSignalSummary +=
+      "- Queries focus on self-guided or instructional phrasing.\n" +
+      "- Search behavior overlaps with learning rather than purchasing.\n" +
+      "- Commercial intent is difficult to isolate.";
+  } else if (patterns.hasPaidLanguage) {
+    searchSignalSummary +=
+      "- Some queries reference pricing or paid access.\n" +
+      "- Intent appears mixed rather than clearly transactional.\n" +
+      "- Willingness to pay cannot be inferred from wording alone.";
+  } else {
+    searchSignalSummary +=
+      "- Queries appear across multiple variations.\n" +
+      "- Intent is mixed and overlaps with non-commercial exploration.\n" +
+      "- Purchase motivation is not clearly expressed.";
+  }
+} else {
+  searchSignalSummary +=
+    "- No external search context was available for this idea.";
+}
 
 
 

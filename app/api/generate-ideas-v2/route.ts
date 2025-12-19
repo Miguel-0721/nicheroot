@@ -5,6 +5,13 @@ const client = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY!,
 });
 
+// IMPORTANT:
+// SerpAPI is intentionally NOT used in Explore / idea generation.
+// This route must stay cheap and fast (no paid external lookups).
+// Only the Blueprint route may use SerpAPI, behind ENABLE_SERPAPI_BLUEPRINT.
+
+
+
 type IdeaRow = {
   id: string;
   title: string;
@@ -93,6 +100,16 @@ export async function POST(req: Request) {
         { status: 400 }
       );
     }
+
+    // Dev-only guard: Explore must never use SerpAPI
+    if (process.env.NODE_ENV === "development") {
+      if (process.env.ENABLE_SERPAPI_EXPLORE === "true") {
+        console.warn(
+          "ENABLE_SERPAPI_EXPLORE is set but Explore route does not use SerpAPI."
+        );
+      }
+    }
+
 
     // Keep this tight for now: 10 ideas only (safe incremental step)
    const systemPrompt = `
