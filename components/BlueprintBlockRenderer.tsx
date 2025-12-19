@@ -33,17 +33,19 @@ export default function BlueprintBlockRenderer({
     <div className="text-gray-700 space-y-7">
       {blocks.map((block, i) => {
         // ---------- PARAGRAPH ----------
-        if (block.type === "paragraph") {
-          return (
-           <p
-  key={i}
-  className="leading-relaxed whitespace-pre-line mb-6"
->
-  {block.value}
-</p>
+   if (block.type === "paragraph") {
+  return (
+    <div
+      key={i}
+      className="pt-8 border-t border-gray-100 first:pt-0 first:border-t-0"
+    >
+      <p className="leading-relaxed whitespace-pre-line max-w-prose text-gray-800">
+        {block.value}
+      </p>
+    </div>
+  );
+}
 
-          );
-        }
 
         // ---------- LIST ----------
         if (block.type === "list") {
