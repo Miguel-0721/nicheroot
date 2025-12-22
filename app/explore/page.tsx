@@ -823,6 +823,12 @@ isBlurred
   </div>
 )}
 
+{/* 🔍 TEMP DEBUG — ranking audit */}
+{!isBlurred && index < 3 && (
+  <div className="mt-1 text-[11px] text-gray-400">
+    Rank: #{index + 1} · Score: {idea.score} · Signal: {idea.badge}
+  </div>
+)}
 
 
 </td>

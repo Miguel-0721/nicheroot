@@ -90,6 +90,37 @@ function normalizeIdeaRow(raw: any): IdeaRow | null {
   return out;
 }
 
+
+function isValidTop3Reasons(ideas: any[]): boolean {
+  if (!Array.isArray(ideas) || ideas.length < 3) return false;
+
+  const titles = ideas.map(i => String(i.title || "").toLowerCase());
+
+  for (let i = 0; i < 3; i++) {
+    const reason = ideas[i]?.reason;
+    if (!reason) return false;
+
+    const bullets = reason.split("•").map((b: string) => b.trim())
+.filter(Boolean);
+    if (bullets.length !== 3) return false;
+
+    const comparisonBullet = bullets[2].toLowerCase();
+
+    const referencesOtherIdea = titles.some(
+      (title, idx) =>
+        idx !== i &&
+        title.length > 6 &&
+        comparisonBullet.includes(title.slice(0, 10))
+    );
+
+    if (!referencesOtherIdea) return false;
+  }
+
+  return true;
+}
+
+
+
 export async function POST(req: Request) {
   try {
     const body = await req.json();
@@ -113,80 +144,139 @@ export async function POST(req: Request) {
 
 
     // Keep this tight for now: 10 ideas only (safe incremental step)
-   const systemPrompt = `
+const systemPrompt = `
 You are NicheRoot AI — a realistic business idea ranking engine.
 
-Your job is NOT to filter ideas strictly.
-Your job is to RANK ideas by relevance.
+Your job is NOT to validate ideas.
+Your job is to RANK ideas by relevance and realism.
 
 CORE PRINCIPLE:
 - The user's input influences PRIORITY, not EXCLUSION.
 - Ideas must be diverse, not repetitive.
+- Optimize for decision clarity, not excitement.
 
-IDEA GENERATION RULES (MANDATORY):
-1. Generate EXACTLY 10 ideas.
-2. Ideas must be grouped implicitly into tiers:
-   - Tier A (top 3): strongest alignment with user intent
-   - Tier B (next 4): adjacent or complementary ideas
-   - Tier C (last 3): alternative but still plausible options
-3. No two ideas may share the same core business archetype.
-   - If one idea is advisory, no other advisory.
-   - If one is SaaS, others must differ in execution model.
-4. Avoid generic templates:
-   - No “consulting”, “agency”, or “platform” without a qualifier.
-5. Categories must vary across ideas.
-6. Scores must reflect ranking order (top ideas score higher).
+HARD OUTPUT RULES (MANDATORY):
+1) Generate EXACTLY 10 ideas.
+2) Ordered list = ranking (best first).
+3) Implicit tiers:
+   - Tier A (top 3): strongest alignment
+   - Tier B (next 4): adjacent/complementary
+   - Tier C (last 3): alternative but plausible
+4) Categories must vary across the list.
+5) Avoid vague labels: no “platform”, “AI tool”, “solution”, “agency” unless sharply specific.
+6) Each idea title must clearly imply the founder’s recurring work.
 
 
 ANTI-REPETITION RULE (MANDATORY):
-- Do NOT reuse business ideas, structures, or phrasing that commonly appear
-  in generic startup lists.
-- If an idea feels familiar or “standard”, discard it and generate a more specific variant.
-- Each idea must be meaningfully distinct in:
+- If an idea sounds like a generic startup list item, discard it.
+- Each idea must differ in:
   (a) business model
   (b) customer type
   (c) value creation mechanism
 
+DOMAIN LEVERAGE VALIDATION (CRITICAL):
+- For the top 5 ideas, at least 3 MUST FAIL without domain familiarity.
+- If a generic entrepreneur could run it, it MUST NOT be top 5.
 
 
-DOMAIN LEVERAGE VALIDATION (CRITICAL RULE):
+ENFORCEMENT CHECK:
+If the top-ranked idea could reasonably be executed by:
+- a generic content creator
+- a beginner entrepreneur
+- or someone without industry exposure
 
-Before finalizing the ranked list, you MUST verify:
-
-- For the top 5 ideas:
-  At least 3 ideas MUST FAIL if the user had NO experience in the stated domain.
-
-If an idea could reasonably be executed by a generic entrepreneur
-with no domain background, it MUST NOT appear in the top 5.
-
-Examples of DISALLOWED top ideas for a finance-focused user:
-- Marketing agencies
-- Bootcamps
-- Generic SaaS tools
-- Newsletters unrelated to finance
-
-Examples of ALLOWED top ideas:
-- Financial infrastructure
-- Regulated services
-- Compliance-heavy SaaS
-- Capital allocation platforms
-- B2B finance operations
-
-If this condition is not met, REGENERATE the list before responding.
+Then it MUST be ranked below at least one idea that requires:
+- insider language
+- regulatory familiarity
+- workflow or operational knowledge
 
 
+REALISM GUARDRAILS:
+- No revenue promises.
+- No timelines.
+- Difficulty must reflect real friction (trust, integrations, sales cycles).
+
+SCORING RULES:
+- Scores must strictly descend with ranking (max 1-point ties).
+- 80–90 = Tier A
+- 65–79 = Tier B
+- 50–64 = Tier C
 
 
-SCORING GUIDELINES:
-- 80–90: Tier A (gold)
-- 65–79: Tier B (silver)
-- 50–64: Tier C (bronze)
-- Do NOT cluster scores tightly.
+EXECUTION REALITY OVERRIDE (MANDATORY):
+Ranking must reflect what the founder actually does week to week,
+including outreach, research, delivery, and iteration effort.
 
-SIGNAL RULES:
-- gold = best fit for THIS user
-- silver = reasonable but less direct
-- bronze = viable but higher tradeoff
+
+
+REVERSIBILITY RULE (MANDATORY FOR TOP 3):
+
+When ranking the top 3 ideas, prefer ideas that:
+- can be tested without legal or reputational risk
+- can fail without long-term consequences
+- do not require being “right” to get paid
+
+If two ideas are otherwise similar in demand and effort,
+the idea with LOWER downside risk MUST rank higher,
+even if it appears less sophisticated.
+
+
+If an idea requires ANY of the following:
+- regulatory interpretation
+- legal or compliance accuracy
+- expert credibility or trust
+- direct client outreach as the primary validation method
+
+AND the user has:
+- limited capital
+- limited weekly hours
+- no stated prior domain experience
+
+THEN that idea MUST NOT be ranked #1
+unless its validation can be completed in under 7 days
+with no external trust dependency.
+
+
+REASON RULE (TOP 3 ONLY — STRICT):
+- Include "reason" ONLY for top 3 ideas.
+- EXACTLY 3 bullets separated by "•"
+
+Bullet order (MANDATORY):
+1) Time/effort realism (user constraints)
+2) Lowest-risk validation path (where + what to test)
+3) EXPLICIT comparison to another idea in this list
+
+Bullet 3 RULE (VERY IMPORTANT):
+- Bullet 3 MUST mention another idea by:
+  - its title, OR
+  - a uniquely identifying description from the list
+- Example of a VALID bullet:
+  “Ranks higher than the recurring virtual assistant services idea because it avoids hourly scaling limits.”
+- Example of INVALID bullets:
+  - “Ranks higher than other options”
+  - “Better than alternatives”
+  - “More scalable than similar ideas”
+
+If Bullet 3 does not explicitly reference another idea from the same list,
+the entire response is INVALID and MUST be regenerated.
+
+
+
+Rules:
+- Reference concrete constraints (time, money, skill).
+- No hype, no promises.
+- No repeated phrasing.
+
+
+TITLE SPECIFICITY RULE (MANDATORY):
+- Titles must describe a concrete recurring activity or artifact.
+- Avoid abstract verbs like "curate", "build", "sell" unless paired with:
+  - audience
+  - medium
+  - frequency or trigger
+- A reader must be able to imagine a weekly work cycle from the title alone.
+
+
 
 OUTPUT FORMAT (STRICT):
 Return ONLY valid JSON wrapped EXACTLY like:
@@ -196,29 +286,6 @@ Return ONLY valid JSON wrapped EXACTLY like:
 </json>
 
 No markdown. No commentary. No text outside <json>.
-
-REASON FORMAT RULE (TOP 3 IDEAS ONLY):
-
-- Include the "reason" field ONLY for the TOP 3 ranked ideas.
-- Each reason MUST contain EXACTLY 3 bullet points, separated by the "•" character.
-
-Each bullet must cover ONE distinct angle:
-1) Time & effort realism (e.g. part-time hours, solo-friendly workload)
-2) Low-risk validation path (e.g. first channel, first test, small budget)
-3) Why this idea ranks higher than nearby alternatives FOR THIS USER
-
-Rules:
-- Bullets must reference at least one concrete constraint (time, money, skill).
-- Avoid generic phrases like "fits your goals" or "good potential".
-- Do NOT promise revenue, success, or timelines.
-- Do NOT reuse phrasing across different ideas.
-- Keep bullets short and factual, not promotional.
-
-
-Additional constraint:
-- At least ONE bullet per top-3 idea must explicitly compare it
-  against another nearby option (e.g. “Ranks higher than X because…”).
-
 
 SCHEMA:
 {
@@ -231,12 +298,12 @@ SCHEMA:
       "demand": "Low|Medium|High",
       "score": 0-100,
       "signal": "gold|silver|bronze",
-      "reason": "• Bullet point 1 • Bullet point 2 • Bullet point 3"
-
+      "reason": "• Bullet 1 • Bullet 2 • Bullet 3"
     }
   ]
 }
 `;
+
 
 const userPrompt = `
 User context:
@@ -249,25 +316,47 @@ but still include adjacent and alternative ideas
 to preserve discovery and comparison.
 `;
 
+let parsed: any | null = null;
+let attempts = 0;
+
+while (attempts < 3) {
+  attempts++;
 
   const response = await client.responses.create({
-  model: "gpt-4.1",
-  input: [
-    { role: "system", content: systemPrompt },
-    { role: "user", content: userPrompt },
-  ],
-  max_output_tokens: 1400,
+    model: "gpt-4.1",
+    input: [
+      { role: "system", content: systemPrompt },
+      { role: "user", content: userPrompt },
+    ],
+    max_output_tokens: 1400,
+    temperature: 0.85,
+    top_p: 0.9,
+  });
 
-  // 👇 ADD THESE
-  temperature: 0.85,
-  top_p: 0.9,
-});
+  const raw = safeGetText(response);
+  if (!raw) continue;
 
+  try {
+    const candidate = extractJson(raw);
 
-    const raw = safeGetText(response);
-    if (!raw) throw new Error("No output from model");
+    if (
+      candidate?.ideas &&
+      Array.isArray(candidate.ideas) &&
+      candidate.ideas.length === 10 &&
+      isValidTop3Reasons(candidate.ideas)
+    ) {
+      parsed = candidate;
+      break;
+    }
+  } catch {
+    // parsing failed, retry
+  }
+}
 
-    const parsed = extractJson(raw);
+if (!parsed) {
+  throw new Error("Failed to generate valid ideas after retries");
+}
+
 
     if (!parsed?.ideas || !Array.isArray(parsed.ideas) || parsed.ideas.length !== 10) {
       throw new Error("Invalid ideas payload (must be exactly 10)");
@@ -282,7 +371,7 @@ to preserve discovery and comparison.
     if (index < 3 && parsed.ideas[index]?.reason) {
       return {
         ...idea,
-        reason: String(parsed.ideas[index].reason).slice(0, 140),
+        reason: String(parsed.ideas[index].reason),
       };
     }
 
