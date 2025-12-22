@@ -84,7 +84,8 @@ function normalizeIdeaRow(raw: any): IdeaRow | null {
     signal: allowedSig.has(signal) ? signal : "silver",
   };
 
-  if (raw.reason) out.reason = String(raw.reason).slice(0, 140);
+    // reason is handled AFTER ranking, not here
+
 
   return out;
 }
@@ -273,8 +274,21 @@ to preserve discovery and comparison.
     }
 
     const ideas: IdeaRow[] = parsed.ideas
-      .map(normalizeIdeaRow)
-      .filter(Boolean) as IdeaRow[];
+  .map(normalizeIdeaRow)
+  .filter(Boolean)
+  .map((idea: IdeaRow, index: number) => {
+
+    // Enforce reason ONLY for top 3 ideas
+    if (index < 3 && parsed.ideas[index]?.reason) {
+      return {
+        ...idea,
+        reason: String(parsed.ideas[index].reason).slice(0, 140),
+      };
+    }
+
+    return idea;
+  }) as IdeaRow[];
+
 
     if (ideas.length < 6) {
       throw new Error("Too many invalid ideas after normalization");
