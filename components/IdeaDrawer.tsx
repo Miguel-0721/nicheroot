@@ -173,14 +173,25 @@ export default function IdeaDrawer({ idea, open, onClose, userContext }: Props) 
                   >
                     Unlock full blueprint
                   </button>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => {
-                        sessionStorage.setItem(
-                          "nicheroot_active_idea",
-                          JSON.stringify(idea)
-                        );
+              ) : (
+  <>
+    {/* Guidance text */}
+   <div className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-xs text-gray-600">
+
+      Use the blueprint if you want a step-by-step plan for this idea.
+      <br />
+      <span className="text-gray-500">
+        If you want to explore a completely different direction, use{" "}
+        <span className="font-medium">Regenerate ideas</span> instead.
+      </span>
+    </div>
+
+    <button
+      onClick={() => {
+        sessionStorage.setItem(
+          "nicheroot_active_idea",
+          JSON.stringify(idea)
+        );
 
                         if (userContext) {
                           sessionStorage.setItem(

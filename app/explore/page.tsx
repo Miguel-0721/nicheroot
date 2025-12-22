@@ -6,7 +6,6 @@ import UpgradeModal from "@/components/UpgradeModal";
 
 const IS_DEV = process.env.NODE_ENV === "development";
 
-
 type Badge = "gold" | "silver" | "bronze" | "grey";
 
 type Idea = {
@@ -33,6 +32,29 @@ const badgeStyles: Record<Badge, string> = {
   grey: "bg-gray-100 text-gray-400",
 };
 const PREVIEW_VISIBLE_COUNT = 5;
+
+
+// ==============================
+// Regen usage persistence (session only)
+// ==============================
+const REGEN_STORAGE_KEY = "nicheroot_regen_used";
+
+function loadRegenUsed(): number {
+  try {
+    const raw = sessionStorage.getItem(REGEN_STORAGE_KEY);
+    return raw ? Number(raw) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function saveRegenUsed(value: number) {
+  try {
+    sessionStorage.setItem(REGEN_STORAGE_KEY, String(value));
+  } catch {}
+}
+
+
 
 
 const MOCK_IDEAS: Idea[] = [
@@ -138,6 +160,8 @@ function normalizeIdeas(rawIdeas: any[]): Idea[] {
 
 
 export default function ExplorePage() {
+  const [chatInput, setChatInput] = useState("");
+
   const [ideas, setIdeas] = useState<Idea[]>([]);
   const [isLoaded, setIsLoaded] = useState(false);
 
@@ -150,6 +174,24 @@ export default function ExplorePage() {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [assistantThinking, setAssistantThinking] = useState(false);
+
+const [assistantMessage, setAssistantMessage] = useState<string | null>(null);
+
+
+
+// TEMP: replace later with real auth / subscription check
+const isProUser = true;
+
+
+  
+// TEMP: regeneration cap (UI-only)
+const REGEN_LIMIT = 20;
+const [regenUsed, setRegenUsed] = useState(() => loadRegenUsed());
+const regenRemaining = REGEN_LIMIT - regenUsed;
+const canRegenerate = isProUser && regenRemaining > 0;
+
+
+
 
 const resetSelection = () => {
   setSelectedIdea(null);
@@ -164,6 +206,112 @@ const triggerAssistantThinking = () => {
   }, 1200);
 };
 
+const handleChatSubmit = () => {
+  const input = chatInput.toLowerCase().trim();
+  if (!input) return;
+
+  // Block regeneration attempts
+  if (input.includes("generate") || input.includes("new ideas")) {
+    setAssistantMessage(
+  "I can help refine or explain the current ideas. To generate new ideas, use the Regenerate ideas button above."
+);
+
+    setChatInput("");
+    return;
+  }
+
+setAssistantThinking(true);
+setAssistantMessage(null);
+
+
+
+// 🧠 EXPLANATION REQUESTS (no filtering, no regen)
+if (
+  input.includes("why") ||
+  input.includes("explain") ||
+  input.includes("rank") ||
+  input.includes("top")
+) {
+  setAssistantThinking(true);
+
+  setTimeout(() => {
+  const topIdea = previewIdeas.find(i => !i.locked);
+
+
+    if (!topIdea) {
+      setAssistantMessage("I don’t have enough data to explain the rankings yet.");
+    } else {
+      setAssistantMessage(
+        `The top idea ranks highest because it balances demand (${topIdea.demand.toLowerCase()}), execution difficulty (${topIdea.difficulty.toLowerCase()}), and your stated constraints. Compared to other options, it can be validated faster with less upfront risk.`
+      );
+    }
+
+    setAssistantThinking(false);
+  }, 800);
+
+  setChatInput("");
+  return;
+}
+
+
+
+
+// ✅ RESET FILTERS FIRST
+setCategory("All");
+setDifficulty("All");
+setSignal("All");
+
+// ✅ ADD THIS BLOCK (RIGHT HERE)
+const didTriggerFilter =
+  input.includes("saas") ||
+  input.includes("content") ||
+  input.includes("services") ||
+  input.includes("education") ||
+  input.includes("marketing") ||
+  input.includes("low") ||
+  input.includes("medium") ||
+  input.includes("high") ||
+  input.includes("hard") ||
+  input.includes("gold") ||
+  input.includes("silver") ||
+  input.includes("bronze");
+
+if (!didTriggerFilter) {
+  setTimeout(() => {
+    setAssistantThinking(false);
+  }, 600);
+  setChatInput("");
+  return;
+}
+
+
+
+
+
+
+  // CATEGORY
+  if (input.includes("saas")) setCategory("SaaS");
+  if (input.includes("content")) setCategory("Content");
+  if (input.includes("services")) setCategory("Services");
+  if (input.includes("education")) setCategory("Education");
+  if (input.includes("marketing")) setCategory("Marketing");
+
+  // DIFFICULTY
+  if (input.includes("low")) setDifficulty("Low");
+  if (input.includes("medium")) setDifficulty("Medium");
+  if (input.includes("high") || input.includes("hard")) setDifficulty("High");
+
+  // SIGNAL
+  if (input.includes("gold")) setSignal("Gold");
+  if (input.includes("silver")) setSignal("Silver");
+  if (input.includes("bronze")) setSignal("Bronze");
+
+ setTimeout(() => {
+  setAssistantThinking(false);
+  setChatInput("");
+}, 600);
+
+};
 
 
 useEffect(() => {
@@ -243,9 +391,10 @@ const previewIdeas = filteredIdeas;
 
 
 
-  const assistantIntro = onboardingText
-    ? `Based on what you shared, I focused on ideas that align with your time, budget, and goals.`
-    : `You can start by exploring the ideas below. Add more context anytime to refine results.`;
+const assistantIntro = onboardingText
+  ? `These ideas are ranked based on your time, budget, and goals. You can refine or compare them below.`
+  : `These ideas are ranked to help you explore options. You can refine or compare them at any time.`;
+
 
 const visibleIdeasCount = Math.min(
   ideas.filter((i) => !i.locked).length,
@@ -266,9 +415,10 @@ if (!isLoaded) return null;
           <h1 className="text-2xl font-semibold text-gray-900">
             Explore business ideas
           </h1>
-          <p className="mt-1 text-sm text-gray-600">
-            Ranked ideas based on your situation, demand, and execution difficulty.
-          </p>
+         <p className="mt-1 text-sm text-gray-600">
+  Ranked ideas based on your situation, demand, and execution reality.
+</p>
+
         </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr]">
@@ -287,6 +437,18 @@ if (!isLoaded) return null;
     Analyzing fit based on your context…
   </div>
 )}
+
+
+
+{assistantMessage && !assistantThinking && (
+  <div className="rounded-lg bg-white p-3 text-xs text-gray-700">
+    <div className="mb-1 font-semibold text-gray-900">
+      Explanation
+    </div>
+    <p>{assistantMessage}</p>
+  </div>
+)}
+
 
 {!assistantThinking && selectedIdea && !selectedIdea.locked && (
   <div className="rounded-lg bg-white p-3 text-xs text-gray-700">
@@ -328,13 +490,63 @@ if (!isLoaded) return null;
                   <div className="line-clamp-5">{onboardingText}</div>
                 </div>
               )}
+
+<p className="mt-3 text-xs text-gray-500">
+  Use the assistant to refine or explain these ideas.
+  <br />
+  To explore a completely different direction, use{" "}
+  <span className="font-medium text-gray-700">Regenerate ideas</span>.
+</p>
+
+
+
             </div>
 
-            <input
-              disabled
-              placeholder="Chat coming soon…"
-              className="mt-4 w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-500"
-            />
+
+<input
+  value={chatInput}
+  onChange={(e) => {
+    if (!isProUser) return;
+    setChatInput(e.target.value);
+  }}
+  onKeyDown={(e) => {
+    if (!isProUser) {
+      if (e.key === "Enter") {
+        setUpgradeOpen(true);
+      }
+      return;
+    }
+
+    if (e.key === "Enter") {
+      handleChatSubmit();
+    }
+  }}
+  disabled={!isProUser}
+  placeholder={
+    isProUser
+      ? "e.g. only SaaS · lower effort · explain top idea"
+      : "Upgrade to refine rankings with the assistant"
+  }
+  className={`mt-4 w-full rounded-xl border px-3 py-2 text-sm ${
+    isProUser
+      ? "border-gray-200 bg-white text-gray-700"
+      : "border-gray-200 bg-gray-100 text-gray-400 cursor-not-allowed"
+  }`}
+/>
+{!isProUser && (
+  <p className="mt-2 text-xs text-gray-500">
+    🔒 Assistant refinement is a Pro feature.
+    <button
+      onClick={() => setUpgradeOpen(true)}
+      className="ml-1 font-medium text-indigo-600 hover:underline"
+    >
+      Upgrade to unlock
+    </button>
+  </p>
+)}
+
+
+
           </aside>
 
           {/* RIGHT: Table */}
@@ -351,8 +563,18 @@ if (!isLoaded) return null;
   </div>
 
 <button
-  disabled={assistantThinking}
+  disabled={assistantThinking || !canRegenerate}
   onClick={async () => {
+    if (!isProUser) {
+      setUpgradeOpen(true);
+      return;
+    }
+
+    if (regenRemaining <= 0) {
+      setUpgradeOpen(true);
+      return;
+    }
+
     setAssistantThinking(true);
 
     const raw = localStorage.getItem("nicheroot_v2_onboarding");
@@ -383,10 +605,20 @@ if (!isLoaded) return null;
         JSON.stringify(data)
       );
 
-      const normalized = normalizeIdeas(data.ideas);
-      setIdeas(normalized);
-      setSelectedIdea(null);
-      setDrawerOpen(false);
+    const normalized = normalizeIdeas(data.ideas);
+setIdeas(normalized);
+setAssistantMessage(null);
+setSelectedIdea(null);
+setDrawerOpen(false);
+
+
+      // ✅ INCREMENT USAGE
+      setRegenUsed((prev) => {
+  const next = prev + 1;
+  saveRegenUsed(next);
+  return next;
+});
+
     } catch {
       alert("Failed to regenerate ideas");
     } finally {
@@ -395,13 +627,31 @@ if (!isLoaded) return null;
     }
   }}
   className={`text-xs font-medium ${
-    assistantThinking
+    assistantThinking || !canRegenerate
       ? "text-gray-400 cursor-not-allowed"
       : "text-indigo-600 hover:underline"
   }`}
 >
-  {assistantThinking ? "Regenerating ideas…" : "Regenerate ideas"}
+  {assistantThinking
+    ? "Regenerating ideas…"
+    : !isProUser
+    ? "Upgrade to regenerate"
+    : regenRemaining <= 0
+    ? "Regeneration limit reached"
+    : "Regenerate ideas"}
 </button>
+
+{isProUser && (
+  <div className="mt-1 text-[11px] text-gray-500">
+    Uses {regenUsed} of {REGEN_LIMIT} regenerations this month
+  </div>
+)}
+
+{isProUser && regenRemaining <= 0 && (
+  <div className="mt-1 text-[11px] text-red-500">
+    You’ve reached your monthly limit. Upgrade to increase it.
+  </div>
+)}
 
 
 </div>

@@ -61,6 +61,9 @@ export default function BlueprintV2Page() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+const [hasJumpedAhead, setHasJumpedAhead] = useState(false);
+
+
   /* ---------------- LOAD + GENERATE ---------------- */
 
   useEffect(() => {
@@ -185,6 +188,46 @@ setActiveSectionId(sortedSections[0]?.id ?? null);
         </div>
       </div>
 
+
+{/* Blueprint orientation */}
+<div className="mx-auto max-w-7xl px-6 pt-6">
+  <div className="rounded-xl border bg-white p-5 space-y-3">
+    <p className="text-sm text-gray-700">
+      This blueprint was generated based on the idea you selected and the
+      context you provided earlier.
+    </p>
+
+    <div className="rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
+      <p className="font-medium text-gray-900 mb-1">
+        What this blueprint is
+      </p>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>A realistic breakdown of how this business works in practice</li>
+        <li>A way to understand effort, risk, and daily reality</li>
+        <li>A decision-support tool before you commit time or money</li>
+      </ul>
+    </div>
+
+    <div className="rounded-lg bg-gray-50 p-3 text-sm text-gray-700">
+      <p className="font-medium text-gray-900 mb-1">
+        What this blueprint is not
+      </p>
+      <ul className="list-disc pl-5 space-y-1">
+        <li>Not a promise of success</li>
+        <li>Not financial or investment advice</li>
+        <li>Not a guarantee of income or demand</li>
+      </ul>
+    </div>
+
+    <p className="text-xs text-gray-500">
+      Read from top to bottom. If a section clearly does not fit your situation,
+      that’s a valid signal to stop or reconsider the idea.
+    </p>
+  </div>
+</div>
+
+
+
       {/* Layout */}
       <div className="mx-auto max-w-7xl px-6 py-8 grid grid-cols-12 gap-6">
         {/* Sidebar */}
@@ -194,17 +237,41 @@ setActiveSectionId(sortedSections[0]?.id ?? null);
             {blueprint.sections.map((section) => {
               const isActive = section.id === activeSectionId;
               return (
-             <li
+     <li
   key={section.id}
-  onClick={() => setActiveSectionId(section.id)}
+  onClick={() => {
+  const currentIndex = blueprint.sections.findIndex(
+    s => s.id === activeSectionId
+  );
+  const targetIndex = blueprint.sections.findIndex(
+    s => s.id === section.id
+  );
+
+ if (targetIndex > currentIndex + 1 && !hasJumpedAhead) {
+  setHasJumpedAhead(true);
+}
+
+if (targetIndex <= currentIndex) {
+  setHasJumpedAhead(false);
+}
+
+  setActiveSectionId(section.id);
+}}
+
   className={`cursor-pointer rounded-md px-2 py-1 transition ${
     isActive
       ? "bg-blue-50 text-blue-600 font-medium"
       : "text-gray-600 hover:bg-gray-100"
   }`}
 >
+  {section.id === blueprint.sections[0].id && (
+    <span className="mr-1 text-[10px] uppercase tracking-wide text-gray-400">
+      Start here
+    </span>
+  )}
   {cleanTitle(section.title)}
 </li>
+
 
               );
             })}
@@ -215,9 +282,16 @@ setActiveSectionId(sortedSections[0]?.id ?? null);
         <main className="col-span-6 space-y-6">
        {activeSection && (
   <section className="bg-white rounded-xl border p-6 space-y-5">
- <p className="text-xs uppercase text-gray-400">
+<p className="text-xs uppercase text-gray-400">
+  Section{" "}
+  {blueprint.sections.findIndex(s => s.id === activeSectionId) + 1}
+  {" "}of {blueprint.sections.length}
+</p>
+
+<p className="text-sm font-medium text-gray-700">
   {cleanTitle(activeSection.title)}
 </p>
+
 
 
 
@@ -234,6 +308,16 @@ setActiveSectionId(sortedSections[0]?.id ?? null);
     No content available for this section.
   </p>
 )}
+
+
+{hasJumpedAhead && (
+  <div className="rounded-lg border border-yellow-200 bg-yellow-50 p-3 text-xs text-yellow-800">
+    You jumped ahead in the blueprint. Earlier sections often provide important
+    context that may change how you interpret this section.
+  </div>
+)}
+
+
 
 {/* ✅ ACTUAL BLOCK RENDERER */}
 {activeSection.content.blocks?.length > 0 && (
