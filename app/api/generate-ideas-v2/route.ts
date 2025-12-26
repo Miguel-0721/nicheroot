@@ -15,21 +15,24 @@ const client = new OpenAI({
 type IdeaRow = {
   id: string;
   title: string;
-  category: string; // e.g. "Services" | "SaaS" | "Content" | "Marketing"
+  category: string;
   difficulty: "Low" | "Medium" | "High";
   demand: "Low" | "Medium" | "High";
-  score: number; // 0-100
+  score: number;
   signal: "gold" | "silver" | "bronze";
-  reason?: string; // optional short justification
+  reason?: string;
+  summary?: string;
+  workCycle?: string; // ✅ ADD THIS
 };
 
+
+
 function extractJson(text: string) {
-  const start = text.indexOf("<json>");
-  const end = text.indexOf("</json>");
-  if (start === -1 || end === -1) throw new Error("JSON wrapper not found");
-  const jsonText = text.slice(start + 6, end).trim();
-  return JSON.parse(jsonText);
+  const match = text.match(/<json>\s*([\s\S]*?)\s*<\/json>/i);
+  if (!match) throw new Error("JSON wrapper not found");
+  return JSON.parse(match[1]);
 }
+
 
 function safeGetText(response: any): string {
   if (response?.output_text) return response.output_text;
@@ -95,30 +98,25 @@ function normalizeIdeaRow(raw: any): IdeaRow | null {
 function isValidTop3Reasons(ideas: any[]): boolean {
   if (!Array.isArray(ideas) || ideas.length < 3) return false;
 
-  const titles = ideas.map(i => String(i.title || "").toLowerCase());
-
   for (let i = 0; i < 3; i++) {
     const reason = ideas[i]?.reason;
-    if (!reason) return false;
+    if (typeof reason !== "string") return false;
 
-    const bullets = reason.split("•").map((b: string) => b.trim())
-.filter(Boolean);
-    if (bullets.length !== 3) return false;
+    // accept • or -
+    const bullets = reason
+      .split(/•|-/)
+      .map((b: string) => b.trim())
+      .filter(Boolean);
 
-    const comparisonBullet = bullets[2].toLowerCase();
-
-    const referencesOtherIdea = titles.some(
-      (title, idx) =>
-        idx !== i &&
-        title.length > 6 &&
-        comparisonBullet.includes(title.slice(0, 10))
-    );
-
-    if (!referencesOtherIdea) return false;
+    // allow 2–4 bullets (not exactly 3)
+    if (bullets.length < 2) return false;
   }
 
   return true;
 }
+
+
+
 
 
 
@@ -239,33 +237,80 @@ with no external trust dependency.
 
 
 REASON RULE (TOP 3 ONLY — STRICT):
-- Include "reason" ONLY for top 3 ideas.
-- EXACTLY 3 bullets separated by "•"
 
-Concrete-work rule (MANDATORY):
-- Bullet 1 MUST mention a real weekly activity the founder will do (examples: outreach, audits, reviews, listings, research, interviews, writing, editing, fulfillment).
-- Avoid vague phrases like "manageable workload" or "easy to start".
+Include a field called "reason" ONLY for the top 3 ideas.
+
+"reason" MUST be a single string containing 2–3 bullet points.
+
+Bullets may be separated by:
+- the "•" character OR
+- a dash "-"
+
+Each bullet must describe:
+• Demand reality
+• Execution effort
+• Validation speed
+
+Exact formatting is NOT required.
+
+
+Each bullet should clearly relate to:
+- demand reality
+- execution effort
+- validation speed
+
+Exact wording, order, or labels are NOT required.
+
+
+Additional rules:
+- No hype
+- No encouragement
+- No promises
+- No references to "your goals"
+- Plain, literal language only
+
+Ranking consistency rule (STRICT):
+
+Higher-ranked ideas MUST have clearer, faster, or cheaper validation
+than lower-ranked ideas.
+
+If two ideas are similar, the higher-ranked one must:
+- validate faster, OR
+- cost less to test, OR
+- rely on clearer existing demand
+
+If the reason does not clearly justify the ranking,
+the response MUST be regenerated.
+
+
+For each idea, also include a field called "summary".
+
+The summary must:
+- Be 2–3 sentences
+- Be written in plain, simple English
+- Explain what the business actually involves in practice
+- Describe concrete activities (what you do week to week)
+- Avoid hype, benefits, or promises
+- NOT repeat the idea title
+
+
+For each idea, also include a field called "workCycle".
+
+The workCycle must:
+- Be 2–3 sentences
+- Describe what a typical week looks like
+- Mention recurring tasks (research, writing, outreach, delivery, etc.)
+- Be neutral and literal
+- Avoid advice, motivation, or outcomes
+- Avoid repeating the summary
+
+Example tone:
+"A typical week involves reviewing new material in the niche, selecting relevant items, writing short explanations, and sending one scheduled update. Most time is spent on research and editing rather than promotion."
 
 
 
-Bullet order (MANDATORY):
-1) Time/effort realism (user constraints)
-2) Lowest-risk validation path (where + what to test)
-3) EXPLICIT comparison to another idea in this list
-
-Bullet 3 RULE (VERY IMPORTANT):
-- Bullet 3 MUST mention another idea by:
-  - its title, OR
-  - a uniquely identifying description from the list
-- Example of a VALID bullet:
-  “Ranks higher than the recurring virtual assistant services idea because it avoids hourly scaling limits.”
-- Example of INVALID bullets:
-  - “Ranks higher than other options”
-  - “Better than alternatives”
-  - “More scalable than similar ideas”
-
-If Bullet 3 does not explicitly reference another idea from the same list,
-the entire response is INVALID and MUST be regenerated.
+Example tone:
+"This idea involves running a weekly email newsletter that summarizes regulatory updates for small businesses. The work mainly consists of tracking official announcements, writing short explanations, and distributing them to subscribers."
 
 
 
@@ -305,10 +350,15 @@ SCHEMA:
       "demand": "Low|Medium|High",
       "score": 0-100,
       "signal": "gold|silver|bronze",
-      "reason": "• Bullet 1 • Bullet 2 • Bullet 3"
+      "reason": "ONLY for top 3",
+      "summary": "2–3 sentences",
+      "workCycle": "2–3 sentences"
     }
   ]
 }
+
+
+
 `;
 
 
@@ -326,7 +376,11 @@ to preserve discovery and comparison.
 let parsed: any | null = null;
 let attempts = 0;
 
-while (attempts < 3) {
+
+let lastRaw = "";
+
+
+while (attempts < 2) {
   attempts++;
 
 
@@ -342,12 +396,14 @@ if (process.env.NODE_ENV === "development") {
       { role: "system", content: systemPrompt },
       { role: "user", content: userPrompt },
     ],
-    max_output_tokens: 1400,
+   max_output_tokens: 3000,
     temperature: 0.7,
     top_p: 0.9,
   });
 
-  const raw = safeGetText(response);
+lastRaw = safeGetText(response);
+const raw = lastRaw;
+
   if (!raw) continue;
 
   try {
@@ -357,7 +413,12 @@ if (process.env.NODE_ENV === "development") {
       candidate?.ideas &&
       Array.isArray(candidate.ideas) &&
       candidate.ideas.length === 10 &&
-      isValidTop3Reasons(candidate.ideas)
+ candidate.ideas.every((idea: any, i: number) => {
+  if (i < 3) return typeof idea.reason === "string";
+  return typeof idea.summary === "string";
+})
+
+
     ) {
       parsed = candidate;
       break;
@@ -369,6 +430,22 @@ if (process.env.NODE_ENV === "development") {
 }
 
 }
+
+
+if (process.env.NODE_ENV === "development") {
+  console.error(
+    "[generate-ideas-v2] last raw model output:",
+    lastRaw
+  );
+}
+
+
+
+if (!parsed && lastRaw.includes("<json>")) {
+  console.error("Model output was truncated. Increase max_output_tokens.");
+}
+
+
 
 if (!parsed) {
   throw new Error("Failed to generate valid ideas after retries");
@@ -382,23 +459,35 @@ if (!parsed) {
     const ideas: IdeaRow[] = parsed.ideas
   .map(normalizeIdeaRow)
   .filter(Boolean)
-  .map((idea: IdeaRow, index: number) => {
+.map((idea: IdeaRow, index: number) => {
+  const next: IdeaRow = { ...idea };
 
-    // Enforce reason ONLY for top 3 ideas
-    if (index < 3 && parsed.ideas[index]?.reason) {
-      return {
-        ...idea,
-        reason: String(parsed.ideas[index].reason),
-      };
-    }
-
-    return idea;
-  }) as IdeaRow[];
+  // ✅ Always carry summary if it exists
+  if (typeof parsed.ideas[index]?.summary === "string") {
+    next.summary = parsed.ideas[index].summary;
+  }
 
 
-    if (ideas.length < 6) {
-      throw new Error("Too many invalid ideas after normalization");
-    }
+if (typeof parsed.ideas[index]?.workCycle === "string") {
+  next.workCycle = parsed.ideas[index].workCycle;
+}
+
+
+  // Always pass summary and workCycle (already correct)
+// Always pass reason IF it exists
+if (typeof parsed.ideas[index]?.reason === "string") {
+  next.reason = String(parsed.ideas[index].reason);
+}
+
+
+  return next;
+}) as IdeaRow[];
+
+
+   if (ideas.length !== 10) {
+  throw new Error("Idea normalization mismatch");
+}
+
 
     return NextResponse.json({ ideas });
   } catch (err: any) {

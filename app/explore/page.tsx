@@ -19,7 +19,11 @@ type Idea = {
   badge: Badge;
   locked?: boolean;
   reason?: string;
+  summary?: string; // ✅ ADD THIS
+  workCycle?: string; // ✅ ADD THIS
 };
+
+
 
 
 type ChatMessage = {
@@ -158,10 +162,13 @@ function normalizeIdeas(rawIdeas: any[]): Idea[] {
         : typeof idea.score === "number" && idea.score >= 70
         ? "silver"
         : "bronze",
-    reason: typeof idea.reason === "string" ? idea.reason : undefined, // ✅ ADD THIS
+    reason: typeof idea.reason === "string" ? idea.reason : undefined,
+    summary: typeof idea.summary === "string" ? idea.summary : undefined, // ✅ ADD THIS
+    workCycle: typeof idea.workCycle === "string" ? idea.workCycle : undefined,
     locked: index >= PREVIEW_VISIBLE_COUNT,
   }));
 }
+
 
 
 
@@ -1045,17 +1052,28 @@ isBlurred
   </div>
 )}
 
-{/* 2️⃣ Reason UNDER the idea name (top 3 only) */}
-{!isBlurred && index < 3 && idea.reason && (
+{/* 2️⃣ Validation context (shown for all unlocked ideas) */}
+{!isBlurred && (
   <div className="mt-2 text-xs text-gray-600">
-    <div className="font-medium text-gray-700">Why this fits you</div>
-    <ul className="mt-1 list-disc pl-4 space-y-0.5">
-      {idea.reason.split("•").map((r, i) =>
-        r.trim() ? <li key={i}>{r.trim()}</li> : null
-      )}
-    </ul>
+    <div className="font-medium text-gray-700">
+      How people usually test this idea
+    </div>
+
+    {idea.reason ? (
+      <ul className="mt-1 list-disc pl-4 space-y-0.5">
+        {idea.reason.split("•").map((r, i) =>
+          r.trim() ? <li key={i}>{r.trim()}</li> : null
+        )}
+      </ul>
+    ) : (
+     <p className="mt-1 text-xs text-gray-500 italic">
+  Validation typically involves testing a small version of the offer
+  with a narrow audience before investing more time or money.
+</p>
+    )}
   </div>
 )}
+
 
 {/* 🔍 DEV ONLY — ranking audit */}
 {IS_DEV && !isBlurred && index < 3 && (
@@ -1163,25 +1181,31 @@ isBlurred
       </div>
 
  <IdeaDrawer
-        idea={
-          selectedIdea
-            ? {
-                id: String(selectedIdea.id),
-                name: selectedIdea.name,
-                category: selectedIdea.category,
-                difficulty: selectedIdea.difficulty,
-                demand: selectedIdea.demand,
-                score: selectedIdea.score,
-                signal:
-                  selectedIdea.badge === "gold"
-                    ? "Gold"
-                    : selectedIdea.badge === "silver"
-                    ? "Silver"
-                    : "Bronze",
-                locked: selectedIdea.locked,
-              }
-            : null
-        }
+      idea={
+  selectedIdea
+    ? {
+        id: String(selectedIdea.id),
+        name: selectedIdea.name,
+        category: selectedIdea.category,
+        difficulty: selectedIdea.difficulty,
+        demand: selectedIdea.demand,
+        score: selectedIdea.score,
+        signal:
+          selectedIdea.badge === "gold"
+            ? "Gold"
+            : selectedIdea.badge === "silver"
+            ? "Silver"
+            : "Bronze",
+        locked: selectedIdea.locked,
+        reason: selectedIdea.reason, // ✅ THIS IS THE FIX
+        summary: selectedIdea.summary, // ✅ THIS IS THE FIX
+        workCycle: selectedIdea.workCycle,
+
+
+      }
+    : null
+}
+
         open={drawerOpen}
         onClose={() => {
   setDrawerOpen(false);

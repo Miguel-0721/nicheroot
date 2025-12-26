@@ -7,4 +7,8 @@ export type BlueprintIdea = {
   score?: number;
   signal?: "Gold" | "Silver" | "Bronze";
   locked?: boolean;
+  reason?: string;
+  summary?: string;
+  workCycle?: string; // ✅ ADD THIS
 };
+
