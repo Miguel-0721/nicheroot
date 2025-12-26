@@ -18,8 +18,9 @@ type Idea = {
   score: number;
   badge: Badge;
   locked?: boolean;
-  reason?: string; // ✅ required
+  reason?: string;
 };
+
 
 type ChatMessage = {
   role: "user" | "assistant";
@@ -223,6 +224,17 @@ const handleChatSubmit = () => {
   const input = chatInput.toLowerCase().trim();
   if (!input) return;
 
+const tokens = input.split(/\s+/);
+
+const explanationIntent =
+  tokens.includes("why") ||
+  tokens.includes("explain") ||
+  tokens.includes("explanation") ||
+  tokens.includes("compare") ||
+  tokens.includes("rank") ||
+  tokens.includes("ranking");
+
+
 
 setChatHistory((prev) => [
   ...prev,
@@ -230,7 +242,14 @@ setChatHistory((prev) => [
 ]);
 
 
-const visibleIdeas = previewIdeas.filter(i => !i.locked);
+const visibleIdeas = ideas.filter(
+  (idea) =>
+    !idea.locked &&
+    (category === "All" || idea.category === category) &&
+    (difficulty === "All" || idea.difficulty === difficulty) &&
+    (signal === "All" || idea.badge === signal.toLowerCase())
+);
+
 
 if (visibleIdeas.length === 0) {
   setChatHistory((prev) => [
@@ -238,12 +257,20 @@ if (visibleIdeas.length === 0) {
     {
       role: "assistant",
       content:
-        "No ideas match the current filters. Try removing a filter or regenerating ideas.",
+        "No ideas match the current filters.\n\n" +
+        "You can try one of these:\n" +
+        "• Remove one filter (e.g. only SaaS)\n" +
+        "• Ask for medium or higher-effort ideas\n" +
+        "• Regenerate ideas to explore a new direction",
     },
   ]);
+
   setChatInput("");
   return;
 }
+
+
+
 
 
 
@@ -282,12 +309,8 @@ if (input.includes("compare") && visibleIdeas.length < 2) {
 
 
 // 🧠 EXPLANATION / COMPARISON (deterministic, no AI)
-if (
-  input.includes("why") ||
-  input.includes("explain") ||
-  input.includes("compare") ||
-  input.includes("rank")
-) {
+if (explanationIntent) {
+
 
   setAssistantThinking(true);
 
@@ -359,24 +382,52 @@ if (
 
 
 
+// 🧭 Guided intent fallback
+if (
+  input === "help" ||
+  input === "what now" ||
+  input === "now what"
+) {
+  setChatHistory((prev) => [
+    ...prev,
+    {
+      role: "assistant",
+      content:
+        "You can ask me things like:\n\n" +
+        "• Why does the top idea rank highest?\n" +
+        "• Compare the top two ideas\n" +
+        "• Show only SaaS ideas\n" +
+        "• Show lower-effort options",
+    },
+  ]);
+  setChatInput("");
+  return;
+}
 
 
-// ✅ ADD THIS BLOCK (RIGHT HERE)
+
+
+
+
+
 const didTriggerFilter =
-  input.includes("saas") ||
-  input.includes("content") ||
-  input.includes("services") ||
-  input.includes("education") ||
-  input.includes("marketing") ||
-  input.includes("low") ||
-  input.includes("medium") ||
-  input.includes("high") ||
-  input.includes("hard") ||
-  input.includes("gold") ||
-  input.includes("silver") ||
-  input.includes("bronze");
+  tokens.includes("saas") ||
+  tokens.includes("content") ||
+  tokens.includes("services") ||
+  tokens.includes("education") ||
+  tokens.includes("marketing") ||
+  tokens.includes("low") ||
+  tokens.includes("medium") ||
+  tokens.includes("high") ||
+  tokens.includes("hard") ||
+  tokens.includes("gold") ||
+  tokens.includes("silver") ||
+  tokens.includes("bronze");
+
 
 if (!didTriggerFilter) {
+  setAssistantThinking(true);
+
   setTimeout(() => {
     setChatHistory((prev) => [
       ...prev,
@@ -398,13 +449,30 @@ if (!didTriggerFilter) {
 }
 
 
+
+
+
 setAssistantThinking(true);
 
 
-// ✅ RESET FILTERS FIRST
-setCategory("All");
-setDifficulty("All");
-setSignal("All");
+// Reset only if user explicitly changes dimension
+if (
+  input.includes("saas") ||
+  input.includes("content") ||
+  input.includes("services") ||
+  input.includes("education") ||
+  input.includes("marketing")
+) {
+  setCategory("All");
+}
+
+if (input.includes("low") || input.includes("medium") || input.includes("high")) {
+  setDifficulty("All");
+}
+
+if (input.includes("gold") || input.includes("silver") || input.includes("bronze")) {
+  setSignal("All");
+}
 
 
 
