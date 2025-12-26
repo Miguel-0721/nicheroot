@@ -49,7 +49,8 @@ function safeGetText(response: any): string {
 function clampScore(n: any) {
   const x = Number(n);
   if (!Number.isFinite(x)) return 50;
-  return Math.max(0, Math.min(100, Math.round(x)));
+  return Math.max(50, Math.min(90, Math.round(x)));
+
 }
 
 function toKebabId(s: string) {
@@ -241,6 +242,12 @@ REASON RULE (TOP 3 ONLY — STRICT):
 - Include "reason" ONLY for top 3 ideas.
 - EXACTLY 3 bullets separated by "•"
 
+Concrete-work rule (MANDATORY):
+- Bullet 1 MUST mention a real weekly activity the founder will do (examples: outreach, audits, reviews, listings, research, interviews, writing, editing, fulfillment).
+- Avoid vague phrases like "manageable workload" or "easy to start".
+
+
+
 Bullet order (MANDATORY):
 1) Time/effort realism (user constraints)
 2) Lowest-risk validation path (where + what to test)
@@ -322,6 +329,13 @@ let attempts = 0;
 while (attempts < 3) {
   attempts++;
 
+
+if (process.env.NODE_ENV === "development") {
+  console.log(`[generate-ideas-v2] attempt ${attempts}`);
+}
+
+
+
   const response = await client.responses.create({
     model: "gpt-4.1",
     input: [
@@ -329,7 +343,7 @@ while (attempts < 3) {
       { role: "user", content: userPrompt },
     ],
     max_output_tokens: 1400,
-    temperature: 0.85,
+    temperature: 0.7,
     top_p: 0.9,
   });
 
@@ -348,9 +362,12 @@ while (attempts < 3) {
       parsed = candidate;
       break;
     }
-  } catch {
-    // parsing failed, retry
+ } catch (err) {
+  if (process.env.NODE_ENV === "development") {
+    console.log("[generate-ideas-v2] JSON validation failed, retrying...");
   }
+}
+
 }
 
 if (!parsed) {

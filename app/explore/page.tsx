@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
+
 import IdeaDrawer from "@/components/IdeaDrawer";
 import UpgradeModal from "@/components/UpgradeModal";
 
@@ -19,6 +20,13 @@ type Idea = {
   locked?: boolean;
   reason?: string; // ✅ required
 };
+
+type ChatMessage = {
+  role: "user" | "assistant";
+  content: string;
+};
+
+
 
 type OnboardingPayload = {
   onboardingText: string;
@@ -175,7 +183,9 @@ export default function ExplorePage() {
   const [upgradeOpen, setUpgradeOpen] = useState(false);
   const [assistantThinking, setAssistantThinking] = useState(false);
 
-const [assistantMessage, setAssistantMessage] = useState<string | null>(null);
+const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+
+const chatEndRef = useRef<HTMLDivElement | null>(null);
 
 
 
@@ -206,48 +216,141 @@ const triggerAssistantThinking = () => {
   }, 1200);
 };
 
+
+
+
 const handleChatSubmit = () => {
   const input = chatInput.toLowerCase().trim();
   if (!input) return;
 
+
+setChatHistory((prev) => [
+  ...prev,
+  { role: "user", content: chatInput }
+]);
+
+
+const visibleIdeas = previewIdeas.filter(i => !i.locked);
+
+if (visibleIdeas.length === 0) {
+  setChatHistory((prev) => [
+    ...prev,
+    {
+      role: "assistant",
+      content:
+        "No ideas match the current filters. Try removing a filter or regenerating ideas.",
+    },
+  ]);
+  setChatInput("");
+  return;
+}
+
+
+
+
   // Block regeneration attempts
   if (input.includes("generate") || input.includes("new ideas")) {
-    setAssistantMessage(
-  "I can help refine or explain the current ideas. To generate new ideas, use the Regenerate ideas button above."
-);
+ setChatHistory((prev) => [
+  ...prev,
+  {
+    role: "assistant",
+    content:
+      "I can help refine or explain the current ideas. To generate new ideas, use the Regenerate ideas button above.",
+  },
+]);
 
     setChatInput("");
     return;
   }
 
-setAssistantThinking(true);
-setAssistantMessage(null);
 
 
 
-// 🧠 EXPLANATION REQUESTS (no filtering, no regen)
+if (input.includes("compare") && visibleIdeas.length < 2) {
+  setChatHistory((prev) => [
+    ...prev,
+    {
+      role: "assistant",
+      content:
+        "There aren’t enough visible ideas to compare. Try removing a filter or regenerating ideas.",
+    },
+  ]);
+  setChatInput("");
+  return;
+}
+
+
+
+// 🧠 EXPLANATION / COMPARISON (deterministic, no AI)
 if (
   input.includes("why") ||
   input.includes("explain") ||
-  input.includes("rank") ||
-  input.includes("top")
+  input.includes("compare") ||
+  input.includes("rank")
 ) {
+
   setAssistantThinking(true);
 
   setTimeout(() => {
-  const topIdea = previewIdeas.find(i => !i.locked);
+    const visible = visibleIdeas;
 
 
-    if (!topIdea) {
-      setAssistantMessage("I don’t have enough data to explain the rankings yet.");
+
+
+
+
+
+    const top = visible[0];
+    const second = visible[1];
+
+    // If user explicitly asks to compare
+    if (input.includes("compare") && second) {
+    setChatHistory((prev) => [
+  ...prev,
+  {
+    role: "assistant",
+    content: `The top idea ranks higher than the next option because:\n\n${
+  top.reason
+    ? top.reason.split("•")[2].trim()
+    : "it has a clearer validation path and lower execution risk than the next option."
+}`
+,
+  },
+]);
+
+      setAssistantThinking(false);
+      return;
+    }
+
+    // Default explanation (why #1 is #1)
+    if (top.reason) {
+      const bullets = top.reason
+        .split("•")
+        .map(b => b.trim())
+        .filter(Boolean);
+
+     setChatHistory((prev) => [
+  ...prev,
+  {
+    role: "assistant",
+    content: `This idea ranks #1 because:\n\n• ${bullets[0]}\n• ${bullets[1]}\n• ${bullets[2]}`,
+  },
+]);
+
     } else {
-      setAssistantMessage(
-        `The top idea ranks highest because it balances demand (${topIdea.demand.toLowerCase()}), execution difficulty (${topIdea.difficulty.toLowerCase()}), and your stated constraints. Compared to other options, it can be validated faster with less upfront risk.`
-      );
+     setChatHistory((prev) => [
+  ...prev,
+  {
+    role: "assistant",
+    content:
+      "This idea ranks highest due to lower execution risk and clearer validation compared to the rest.",
+  },
+]);
+
     }
 
     setAssistantThinking(false);
-  }, 800);
+  }, 600);
 
   setChatInput("");
   return;
@@ -256,10 +359,7 @@ if (
 
 
 
-// ✅ RESET FILTERS FIRST
-setCategory("All");
-setDifficulty("All");
-setSignal("All");
+
 
 // ✅ ADD THIS BLOCK (RIGHT HERE)
 const didTriggerFilter =
@@ -278,12 +378,33 @@ const didTriggerFilter =
 
 if (!didTriggerFilter) {
   setTimeout(() => {
+    setChatHistory((prev) => [
+      ...prev,
+      {
+        role: "assistant",
+        content:
+          "You can ask things like:\n\n" +
+          "• Why does the top idea rank highest?\n" +
+          "• Compare the top two ideas\n" +
+          "• Show lower-effort options\n" +
+          "• Explain how scoring works",
+      },
+    ]);
     setAssistantThinking(false);
   }, 600);
+
   setChatInput("");
   return;
 }
 
+
+setAssistantThinking(true);
+
+
+// ✅ RESET FILTERS FIRST
+setCategory("All");
+setDifficulty("All");
+setSignal("All");
 
 
 
@@ -371,6 +492,10 @@ setIsLoaded(true);
   }
 }, []);
 
+useEffect(() => {
+  chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+}, [chatHistory]);
+
 
   const filteredIdeas = useMemo(() => {
     return ideas.filter((idea) => {
@@ -396,13 +521,7 @@ const assistantIntro = onboardingText
   : `These ideas are ranked to help you explore options. You can refine or compare them at any time.`;
 
 
-const visibleIdeasCount = Math.min(
-  ideas.filter((i) => !i.locked).length,
-  PREVIEW_VISIBLE_COUNT
-);
 
-
-const totalIdeasCount = ideas.length;
 
 const showLockedPreview = true;
 if (!isLoaded) return null;
@@ -411,15 +530,18 @@ if (!isLoaded) return null;
     <main className="min-h-screen bg-white">
       <div className="mx-auto max-w-7xl px-6 py-10">
         {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-semibold text-gray-900">
-            Explore business ideas
-          </h1>
-         <p className="mt-1 text-sm text-gray-600">
-  Ranked ideas based on your situation, demand, and execution reality.
-</p>
+      <div className="mb-6">
+  <h1 className="text-2xl font-semibold text-gray-900">
+    Explore business ideas
+  </h1>
+  <p className="mt-1 text-sm text-gray-600">
+    Ranked ideas based on your situation, demand, and execution reality.
+  </p>
+  <p className="mt-2 text-sm text-gray-500">
+    Start by scanning the top ideas, or ask the assistant to explain why they rank this way.
+  </p>
+</div>
 
-        </div>
 
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[320px_1fr]">
           {/* LEFT: Assistant */}
@@ -429,8 +551,25 @@ if (!isLoaded) return null;
             </div>
 
             <div className="space-y-3 text-sm text-gray-700">
-              <div className="rounded-xl bg-gray-100 p-3 space-y-2">
+         <div className="rounded-xl bg-gray-100 p-3 space-y-2">
   <p>{assistantIntro}</p>
+  <p className="text-xs text-gray-500">
+    Ask me to explain rankings, compare ideas, or refine what you’re seeing.
+  </p>
+
+{chatHistory.length === 0 && !assistantThinking && (
+  <div className="rounded-lg bg-white p-3 text-xs text-gray-600">
+    <div className="mb-1 font-semibold text-gray-900">Try asking:</div>
+    <ul className="list-disc pl-4 space-y-1">
+      <li>Why does the top idea rank highest?</li>
+      <li>Compare the top two ideas</li>
+      <li>Only SaaS</li>
+      <li>Lower effort</li>
+    </ul>
+  </div>
+)}
+
+
 
 {assistantThinking && (
   <div className="rounded-lg bg-white p-3 text-xs text-gray-500 italic">
@@ -440,14 +579,31 @@ if (!isLoaded) return null;
 
 
 
-{assistantMessage && !assistantThinking && (
-  <div className="rounded-lg bg-white p-3 text-xs text-gray-700">
-    <div className="mb-1 font-semibold text-gray-900">
-      Explanation
-    </div>
-    <p>{assistantMessage}</p>
+{chatHistory.length > 0 && (
+  <div className="max-h-[420px] overflow-y-auto space-y-2">
+    {chatHistory.map((msg, i) => (
+      <div
+        key={i}
+        className={`rounded-lg p-3 text-xs ${
+          msg.role === "user"
+            ? "bg-gray-100 text-gray-800"
+            : "bg-white border text-gray-700"
+        }`}
+      >
+        {msg.role === "assistant" && (
+          <div className="mb-1 font-semibold text-gray-900">
+            Explanation
+          </div>
+        )}
+        <p className="whitespace-pre-line">{msg.content}</p>
+      </div>
+    ))}
+
+    <div ref={chatEndRef} />
   </div>
 )}
+
+
 
 
 {!assistantThinking && selectedIdea && !selectedIdea.locked && (
@@ -607,9 +763,10 @@ if (!isLoaded) return null;
 
     const normalized = normalizeIdeas(data.ideas);
 setIdeas(normalized);
-setAssistantMessage(null);
+setChatHistory([]); // reset chat for new table
 setSelectedIdea(null);
 setDrawerOpen(false);
+
 
 
       // ✅ INCREMENT USAGE
@@ -633,7 +790,7 @@ setDrawerOpen(false);
   }`}
 >
   {assistantThinking
-    ? "Regenerating ideas…"
+    ? "Re-evaluating trade-offs…"
     : !isProUser
     ? "Upgrade to regenerate"
     : regenRemaining <= 0
@@ -695,7 +852,7 @@ setDrawerOpen(false);
               </select>
             </div>
 
-<div className="flex flex-wrap gap-2 px-4 py-3 text-xs text-gray-600">
+<div className="flex flex-wrap gap-3 px-4 py-3 text-xs text-gray-600">
   <span className="flex items-center gap-1">
     <span className="h-2 w-2 rounded-full bg-amber-400" /> Gold = strongest fit
   </span>
@@ -705,7 +862,12 @@ setDrawerOpen(false);
   <span className="flex items-center gap-1">
     <span className="h-2 w-2 rounded-full bg-orange-400" /> Bronze = niche / longer-term
   </span>
+
+  <span className="text-gray-400">
+    • Score reflects overall fit (time, skills, demand, execution risk)
+  </span>
 </div>
+
 
 
 {showLockedPreview && (
@@ -727,7 +889,11 @@ setDrawerOpen(false);
     <th className="px-4 py-3 text-left">Category</th>
     <th className="px-4 py-3 text-left">Difficulty</th>
     <th className="px-4 py-3 text-left">Demand</th>
-    <th className="px-4 py-3 text-left">Score</th>
+  <th className="px-4 py-3 text-left">
+  Score
+</th>
+
+
     <th className="px-4 py-3 text-left">Signal</th>
   </tr>
 </thead>
@@ -823,12 +989,13 @@ isBlurred
   </div>
 )}
 
-{/* 🔍 TEMP DEBUG — ranking audit */}
-{!isBlurred && index < 3 && (
+{/* 🔍 DEV ONLY — ranking audit */}
+{IS_DEV && !isBlurred && index < 3 && (
   <div className="mt-1 text-[11px] text-gray-400">
     Rank: #{index + 1} · Score: {idea.score} · Signal: {idea.badge}
   </div>
 )}
+
 
 
 </td>
