@@ -44,7 +44,7 @@ const badgeStyles: Record<Badge, string> = {
   bronze: "bg-orange-100 text-orange-800",
   grey: "bg-gray-100 text-gray-400",
 };
-const PREVIEW_VISIBLE_COUNT = 5;
+
 
 
 // ==============================
@@ -165,11 +165,34 @@ function normalizeIdeas(rawIdeas: any[]): Idea[] {
     reason: typeof idea.reason === "string" ? idea.reason : undefined,
     summary: typeof idea.summary === "string" ? idea.summary : undefined, // ✅ ADD THIS
     workCycle: typeof idea.workCycle === "string" ? idea.workCycle : undefined,
-    locked: index >= PREVIEW_VISIBLE_COUNT,
+  
   }));
 }
 
 
+function applyFreeVisibility(ideas: Idea[], isProUser: boolean): Idea[] {
+  // Pro users see everything
+  if (isProUser) {
+    return ideas.map((idea) => ({ ...idea, locked: false }));
+  }
+
+  let goldCount = 0;
+  let silverCount = 0;
+
+  return ideas.map((idea) => {
+    if (idea.badge === "gold" && goldCount < 1) {
+      goldCount++;
+      return { ...idea, locked: false };
+    }
+
+    if (idea.badge === "silver" && silverCount < 2) {
+      silverCount++;
+      return { ...idea, locked: false };
+    }
+
+    return { ...idea, locked: true };
+  });
+}
 
 
 
@@ -198,7 +221,8 @@ const chatEndRef = useRef<HTMLDivElement | null>(null);
 
 
 // TEMP: replace later with real auth / subscription check
-const isProUser = true;
+const isProUser = false;
+
 
 
   
@@ -206,7 +230,8 @@ const isProUser = true;
 const REGEN_LIMIT = 20;
 const [regenUsed, setRegenUsed] = useState(() => loadRegenUsed());
 const regenRemaining = REGEN_LIMIT - regenUsed;
-const canRegenerate = isProUser && regenRemaining > 0;
+const canRegenerate = isProUser ? regenRemaining > 0 : true;
+
 
 
 
@@ -529,10 +554,13 @@ if (raw) {
   const parsed = JSON.parse(raw);
 
   if (Array.isArray(parsed?.ideas) && parsed.ideas.length > 0) {
-    const normalized = normalizeIdeas(parsed.ideas);
-    setIdeas(normalized);
-    setIsLoaded(true);
-    return;
+   const normalized = normalizeIdeas(parsed.ideas);
+const withVisibility = applyFreeVisibility(normalized, isProUser);
+
+setIdeas(withVisibility);
+setIsLoaded(true);
+return;
+
   }
 }
 
@@ -542,12 +570,9 @@ if (raw) {
 if (IS_DEV) {
   const generated = generateSessionIdeas();
 
-  setIdeas(
-    generated.map((idea, index) => ({
-      ...idea,
-      locked: index >= PREVIEW_VISIBLE_COUNT,
-    }))
-  );
+  const withVisibility = applyFreeVisibility(generated, isProUser);
+setIdeas(withVisibility);
+
 } else {
   setIdeas([]);
 }
@@ -585,7 +610,8 @@ useEffect(() => {
     });
   }, [ideas, category, difficulty, signal]);
 
-// We render all ideas, but visually lock anything after PREVIEW_VISIBLE_COUNT
+// We render all ideas, visibility is controlled by applyFreeVisibility
+
 const previewIdeas = filteredIdeas;
 
 
@@ -740,18 +766,20 @@ if (!isLoaded) return null;
     if (!isProUser) return;
     setChatInput(e.target.value);
   }}
-  onKeyDown={(e) => {
-    if (!isProUser) {
-      if (e.key === "Enter") {
-        setUpgradeOpen(true);
-      }
-      return;
-    }
-
+onKeyDown={(e) => {
+  if (!isProUser) {
     if (e.key === "Enter") {
-      handleChatSubmit();
+      setUpgradeOpen(true);
     }
-  }}
+    return;
+  }
+
+  if (e.key === "Enter") {
+    handleChatSubmit();
+  }
+}}
+
+
   disabled={!isProUser}
   placeholder={
     isProUser
@@ -835,9 +863,11 @@ if (!isLoaded) return null;
         "nicheroot_ideas_v2",
         JSON.stringify(data)
       );
+const normalized = normalizeIdeas(data.ideas);
+const withVisibility = applyFreeVisibility(normalized, isProUser);
 
-    const normalized = normalizeIdeas(data.ideas);
-setIdeas(normalized);
+setIdeas(withVisibility);
+
 setChatHistory([]); // reset chat for new table
 setSelectedIdea(null);
 setDrawerOpen(false);
@@ -944,15 +974,12 @@ setDrawerOpen(false);
 </div>
 
 
-
-{showLockedPreview && (
-  <div className="px-4 py-6 text-center text-sm text-gray-400 italic">
-    You’re seeing the top matches — unlock to view full details and rankings.
-
+{!isProUser && (
+  <div className="px-4 py-3 text-xs text-gray-500">
+    You’re viewing a partial ranking. Unlock Pro to see full comparisons,
+    validation paths, and deeper insights.
   </div>
 )}
-
-
 
 
             {/* Table */}
@@ -1008,35 +1035,31 @@ const isBlurred = idea.locked;
           setDrawerOpen(true);
         }
       }}
-      className={`relative group border-t border-gray-100 focus:outline-none ${
+className={`relative group border-t border-gray-100 focus:outline-none ${
 isBlurred
-  ? "cursor-pointer select-none opacity-40 hover:opacity-50"
+  ? "cursor-pointer select-none"
   : "cursor-pointer hover:bg-gray-50"
 
+} ${
+  !isBlurred && idea.badge === "gold"
+    ? "bg-gradient-to-r from-amber-50 to-white"
+    : !isBlurred && idea.badge === "silver"
+    ? "bg-gradient-to-r from-gray-50 to-white"
+    : !isBlurred && idea.badge === "bronze"
+    ? "bg-gradient-to-r from-orange-50/40 to-white"
+    : ""
+} ${
+  selectedIdea?.id === idea.id && !isBlurred
+    ? "bg-indigo-50 ring-1 ring-indigo-200"
+    : ""
+}`}
 
-
-      } ${
-        !isBlurred && idea.badge === "gold"
-          ? "bg-gradient-to-r from-amber-50 to-white"
-          : ""
-      } ${
-        selectedIdea?.id === idea.id && !isBlurred
-          ? "bg-indigo-50 ring-1 ring-indigo-200"
-          : ""
-      }`}
     >
 
 
 
 
      <td className="relative px-4 py-3 font-medium text-gray-900">
-{isBlurred && (
-  <div className="absolute inset-0 flex items-center justify-center bg-white/75 backdrop-blur-sm">
-    <span className="flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-semibold text-gray-600 shadow-sm">
-      🔒 Unlock to view
-    </span>
-  </div>
-)}
 
 
   {index === 0 && !isBlurred && (
@@ -1045,34 +1068,33 @@ isBlurred
     </span>
   )}
 
-{/* 1️⃣ Idea name FIRST */}
-{!isBlurred && (
-  <div className="font-medium text-gray-900">
-    {idea.name}
-  </div>
-)}
+<div
+  className={`font-medium ${
+    isBlurred ? "text-gray-400" : "text-gray-900"
+  }`}
+>
+  {idea.name}
+</div>
 
-{/* 2️⃣ Validation context (shown for all unlocked ideas) */}
-{!isBlurred && (
+
+
+
+
+{/* 2️⃣ Validation context — GOLD ONLY */}
+{!isBlurred && idea.badge === "gold" && idea.reason && (
   <div className="mt-2 text-xs text-gray-600">
     <div className="font-medium text-gray-700">
       How people usually test this idea
     </div>
 
-    {idea.reason ? (
-      <ul className="mt-1 list-disc pl-4 space-y-0.5">
-        {idea.reason.split("•").map((r, i) =>
-          r.trim() ? <li key={i}>{r.trim()}</li> : null
-        )}
-      </ul>
-    ) : (
-     <p className="mt-1 text-xs text-gray-500 italic">
-  Validation typically involves testing a small version of the offer
-  with a narrow audience before investing more time or money.
-</p>
-    )}
+    <ul className="mt-1 list-disc pl-4 space-y-0.5">
+      {idea.reason.split("•").map((r, i) =>
+        r.trim() ? <li key={i}>{r.trim()}</li> : null
+      )}
+    </ul>
   </div>
 )}
+
 
 
 {/* 🔍 DEV ONLY — ranking audit */}
@@ -1086,24 +1108,51 @@ isBlurred
 
 </td>
 
-<td className="px-4 py-3 text-gray-600">{idea.category}</td>
+<td className="px-4 py-3">
+  <span className={isBlurred ? "text-gray-400" : "text-gray-600"}>
+    {idea.category}
+  </span>
+</td>
 
-<td className="px-4 py-3 text-gray-600">{idea.difficulty}</td>
 
-<td className="px-4 py-3 text-gray-600">{idea.demand}</td>
-
-<td className="px-4 py-3 font-medium text-gray-900">
-  {isBlurred ? "—" : idea.score}
+<td className="px-4 py-3">
+  <span className={isBlurred ? "text-gray-400" : "text-gray-600"}>
+    {idea.difficulty}
+  </span>
 </td>
 
 <td className="px-4 py-3">
-  {!isBlurred && (
-    <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${badgeStyles[idea.badge]}`}
-    >
-      {idea.badge}
-    </span>
-  )}
+  <span className={isBlurred ? "text-gray-400" : "text-gray-600"}>
+    {idea.demand}
+  </span>
+</td>
+
+
+<td className="px-4 py-3 font-medium">
+  <span className={isBlurred ? "text-gray-400" : "text-gray-900"}>
+    {isBlurred ? "—" : idea.score}
+  </span>
+</td>
+
+
+<td className="px-4 py-3">
+<span
+  className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+    isBlurred
+      ? `${badgeStyles[idea.badge]} opacity-40`
+      : badgeStyles[idea.badge]
+  }`}
+>
+
+  {idea.badge.charAt(0).toUpperCase() + idea.badge.slice(1)}
+
+  
+</span>
+
+
+
+
+
 
   {index === 0 && !isBlurred && (
     <div className="mt-1 text-[11px] text-gray-500">
@@ -1111,6 +1160,7 @@ isBlurred
     </div>
   )}
 </td>
+
 
 
     </tr>
